@@ -31,7 +31,7 @@ A timeout has an uncertain outcome if execution already began: inspect state bef
 | Files | replay.list/open/close/rename/delete/process, process.status |
 | Playback | playback.set (speed 0 pauses), playback.seek |
 | Camera | camera.set/options/spectate, entities.list |
-| Recording | recording.set, recording.marker |
+| Recording | recording.set, recording.marker, client.disconnect |
 | Markers | markers.list/set |
 | Paths | path.get/keyframe/remove/move/clear/interpolation/undo/redo/save/load/play/stop/repository/import/export/preview |
 | Settings | settings.get/set |
@@ -55,6 +55,7 @@ Custom executable/FFmpeg argument injection is deliberately not part of the remo
 
 Recording must be enabled before connecting so login/chunk packets are captured. recording.set accepts start, pause, resume, stop.
 Pause/stop use ReplayMod cut/split markers; packet capture continues until disconnect, which finalizes the recording.
+Call `client.disconnect` to leave the live world and finalize capture without a menu. Saving is asynchronous; poll replay.list for the output.
 API-enabled sessions finalize to the replay directory without a rename dialog.
 Compatibility mismatches return an error; explicitly pass `allowModMismatch:true` to replay.open to proceed.
 
@@ -69,4 +70,4 @@ poll process.status for progress and output file names. Originals are retained i
 Marker names `_RM_START_CUT`, `_RM_END_CUT`, and `_RM_SPLIT` provide unattended trimming/splitting through markers.set and replay.process.
 
 Runtime modpack and shader compatibility must be tested with the actual client. Third-party extensions and online publishing integrations are outside this client-control API.
-GPL-3.0-or-later; upstream credits and mod identifiers are retained for compatibility.
+GPL-3.0-or-later; upstream credits and the internal `replaymod` identifier are retained for compatibility. Forge shows one AgenticReplay mod entry.

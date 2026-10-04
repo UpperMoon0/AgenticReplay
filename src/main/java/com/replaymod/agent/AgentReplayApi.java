@@ -35,7 +35,7 @@ public final class AgentReplayApi {
     public static final List<String> METHODS = List.of(
         "capabilities", "status", "replay.list", "replay.open", "replay.close", "replay.rename", "replay.delete",
         "playback.set", "playback.seek", "camera.set", "camera.spectate", "entities.list",
-        "recording.set", "recording.marker", "markers.list", "markers.set",
+        "recording.set", "recording.marker", "client.disconnect", "markers.list", "markers.set",
         "path.get", "path.keyframe", "path.remove", "path.move", "path.clear", "path.interpolation",
         "path.undo", "path.redo", "path.save", "path.load", "path.play", "path.stop",
         "path.repository", "path.import", "path.export", "path.preview", "camera.options",
@@ -106,6 +106,15 @@ public final class AgentReplayApi {
                     ReplayModReplay.instance.startReplay(file, false, true);
 
                 } catch (Exception failure) { file.close(); throw failure; }
+                return status();
+            }
+            case "client.disconnect": {
+                if (ReplayModReplay.instance.getReplayHandler() != null) {
+                    stopPath(); replay().endReplay();
+                } else {
+                    core.getMinecraft().disconnect();
+                    core.getMinecraft().setScreen(new net.minecraft.client.gui.screen.TitleScreen());
+                }
                 return status();
             }
             case "replay.close": stopPath(); replay().endReplay(); return status();
