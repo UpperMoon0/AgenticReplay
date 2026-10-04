@@ -44,7 +44,7 @@ configurations {
 
 processResources {
     inputs.property "version", project.version
-    archivesBaseName = "reforgedplaymod-${project.minecraft_version}"
+    archivesBaseName = "agenticreplay-${project.minecraft_version}"
     filesMatching("META-INF/mods.toml") {
         expand "version": project.version
     }

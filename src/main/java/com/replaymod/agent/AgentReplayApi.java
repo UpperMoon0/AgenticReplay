@@ -5,7 +5,6 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.replaymod.core.ReplayMod;
 import com.replaymod.editor.gui.MarkerProcessor;
 import com.replaymod.replay.NoGuiScreenshot;
-import org.apache.commons.lang3.tuple.Pair;
 import javax.imageio.ImageIO;
 import java.io.ByteArrayOutputStream;
 import com.replaymod.core.SettingsRegistry;
@@ -191,7 +190,7 @@ public final class AgentReplayApi {
                         throw new IllegalArgumentException("marker time outside replay");
                     markers.add(marker);
                 }
-                synchronized (replay().getReplayFile()) { replay().getReplayFile().writeMarkers(markers); }
+                replay().getOverlay().timeline.replaceMarkers(markers);
                 return success();
             }
             case "path.get": return pathJson();
@@ -213,7 +212,7 @@ public final class AgentReplayApi {
                         if (core.getMinecraft().world.getEntityById(entity) == null) throw new IllegalArgumentException("Entity not found");
                         var tracker = pathing().getGuiPathing().getEntityTracker();
                         if (tracker == null) throw new IllegalStateException("Entity tracker loading; retry after status");
-                        timeline.setEntityTracker(tracker);
+                        if (timeline.getEntityTracker() == null) timeline.setEntityTracker(tracker);
                     }
                     if (timeline.isPositionKeyframe(time) && (entity != -1 || timeline.isSpectatorKeyframe(time))) {
                         timeline.removePositionKeyframe(time);
@@ -407,6 +406,13 @@ public final class AgentReplayApi {
 
     private void validateTimeline() {
         var t = timeline();
+        for (var path : t.getTimeline().getPaths()) for (var frame : path.getKeyframes()) {
+            if (t.isSpectatorKeyframe(frame.getTime()) && t.getEntityTracker() == null)
+                throw new IllegalStateException("Entity tracker still loading");
+            var timestamp = frame.getValue(com.replaymod.pathing.properties.TimestampProperty.PROPERTY);
+            if (timestamp.isPresent() && (timestamp.get() < 0 || timestamp.get() > replay().getReplayDuration()))
+                throw new IllegalArgumentException("Path timestamp outside replay");
+        }
         if (t.getPositionPath().getKeyframes().size() < 2 || t.getTimePath().getKeyframes().size() < 2)
             throw new IllegalArgumentException("At least two position and two time keyframes are required");
         if (t.getPositionPath().getKeyframe(0) == null || t.getTimePath().getKeyframe(0) == null)
@@ -467,7 +473,13 @@ public final class AgentReplayApi {
         return controls;
     }
     private ReplayModSimplePathing pathing() { replay(); return ReplayModSimplePathing.instance; }
-    private SPTimeline timeline() { return pathing().getCurrentTimeline(); }
+    private SPTimeline timeline() {
+        var pathing = pathing();
+        var timeline = pathing.getCurrentTimeline();
+        var tracker = pathing.getGuiPathing().getEntityTracker();
+        if (timeline.getEntityTracker() == null && tracker != null) timeline.setEntityTracker(tracker);
+        return timeline;
+    }
     private JsonElement pathJson() throws java.io.IOException {
         String json = new TimelineSerialization(new SPTimeline(), null).serialize(Collections.singletonMap("", timeline().getTimeline()));
         return JsonParser.parseString(json);
