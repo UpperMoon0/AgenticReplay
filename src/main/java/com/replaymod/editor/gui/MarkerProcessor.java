@@ -121,6 +121,14 @@ public class MarkerProcessor {
         }
 
         String replayName = FilenameUtils.getBaseName(path.getFileName().toString());
+        // Preflight before moving the original: splitting must never overwrite another replay.
+        try (ReplayFile input = mod.files.open(path)) {
+            for (String suffix : getOutputSuffixes(input)) {
+                Path output = path.resolveSibling(replayName + suffix + ".mcpr");
+                if (!output.equals(path) && Files.exists(output, java.nio.file.LinkOption.NOFOLLOW_LINKS))
+                    throw new IOException("Replay output already exists: " + output.getFileName());
+            }
+        }
         int splitCounter = 0;
 
         PacketTypeRegistry registry = MCVer.getPacketTypeRegistry(State.LOGIN);

@@ -120,14 +120,20 @@ public class VideoRenderer implements RenderInfo {
     private final VirtualWindow guiWindow = new VirtualWindow(mc);
     private final GuiVideoRenderer gui;
     private boolean paused;
+    private final boolean interactive;
     private boolean cancelled;
     private volatile Throwable failureCause;
 
     public VideoRenderer(RenderSettings settings, ReplayHandler replayHandler, Timeline timeline) throws IOException {
+        this(settings, replayHandler, timeline, true);
+    }
+
+    public VideoRenderer(RenderSettings settings, ReplayHandler replayHandler, Timeline timeline, boolean interactive) throws IOException {
+        this.interactive = interactive;
         this.settings = settings;
         this.replayHandler = replayHandler;
         this.timeline = timeline;
-        this.gui = new GuiVideoRenderer(this);
+        this.gui = interactive ? new GuiVideoRenderer(this) : null;
         if (settings.getRenderMethod() == RenderSettings.RenderMethod.BLEND) {
             BlendState.setState(new BlendState(settings.getOutputFile()));
 
@@ -154,7 +160,7 @@ public class VideoRenderer implements RenderInfo {
                             int frameId = bgra.getFrameId();
                             if (lastFrameId < frameId) {
                                 lastFrameId = frameId;
-                                gui.updatePreview(bgra.getByteBuffer(), bgra.getSize());
+                                if (interactive) gui.updatePreview(bgra.getByteBuffer(), bgra.getSize());
                             }
                         }
                     }
@@ -187,6 +193,21 @@ public class VideoRenderer implements RenderInfo {
      */
     public boolean renderVideo() throws Throwable {
         ReplayRenderCallback.Pre.EVENT.invoker().beforeRendering(this);
+        boolean result;
+        try {
+            result = renderVideoInternal();
+        } catch (Throwable failure) {
+            setFailure(failure);
+            throw failure;
+        } finally {
+            finish();
+            ReplayRenderCallback.Post.EVENT.invoker().afterRendering(this);
+        }
+        if (failureCause != null) throw failureCause;
+        return result;
+    }
+
+    private boolean renderVideoInternal() throws Throwable {
 
         setup();
 
@@ -241,9 +262,6 @@ public class VideoRenderer implements RenderInfo {
                     settings.getSphericalFovX(), settings.getSphericalFovY());
         }
 
-        finish();
-
-        ReplayRenderCallback.Post.EVENT.invoker().afterRendering(this);
 
         if (failureCause != null) {
             throw failureCause;
@@ -371,17 +389,17 @@ public class VideoRenderer implements RenderInfo {
             cameraPathExporter.setup(totalFrames);
         }
 
-        gui.toMinecraft().init(mc, mc.getWindow().getScaledWidth(), mc.getWindow().getScaledHeight());
+        if (interactive) gui.toMinecraft().init(mc, mc.getWindow().getScaledWidth(), mc.getWindow().getScaledHeight());
 
         forceChunkLoadingHook = new ForceChunkLoadingHook(mc.worldRenderer);
     }
 
     private void finish() {
-        if (!timelinePlayerFuture.isDone()) {
+        if (timelinePlayerFuture != null && !timelinePlayerFuture.isDone()) {
             timelinePlayerFuture.cancel(false);
         }
         // Tear down of the timeline player might only happen the next tick after it was cancelled
-        timelinePlayer.onTick();
+        if (timelinePlayer != null && timelinePlayerFuture != null) timelinePlayer.onTick();
 
         guiWindow.close();
 
@@ -405,13 +423,13 @@ public class VideoRenderer implements RenderInfo {
             //$$ mc.mouseHelper.grabMouseCursor();
             //#endif
         }
-        for (Map.Entry<SoundCategory, Float> entry : originalSoundLevels.entrySet()) {
+        if (originalSoundLevels != null) for (Map.Entry<SoundCategory, Float> entry : originalSoundLevels.entrySet()) {
             mc.options.getSoundVolumeOption(entry.getKey()).setValue((double) entry.getValue());
         }
         mc.setScreen(null);
-        forceChunkLoadingHook.uninstall();
+        if (forceChunkLoadingHook != null) forceChunkLoadingHook.uninstall();
 
-        if (!hasFailed() && cameraPathExporter != null) {
+        if (!hasFailed() && !cancelled && cameraPathExporter != null) {
             try {
                 cameraPathExporter.finish();
             } catch (IOException e) {
@@ -419,10 +437,10 @@ public class VideoRenderer implements RenderInfo {
             }
         }
 
-        mc.getSoundManager().play(PositionedSoundInstance.master(SoundEvent.of(SOUND_RENDER_SUCCESS), 1));
+        if (interactive && !hasFailed() && !cancelled) mc.getSoundManager().play(PositionedSoundInstance.master(SoundEvent.of(SOUND_RENDER_SUCCESS), 1));
 
         try {
-            if (!hasFailed() && ffmpegWriter != null) {
+            if (interactive && !hasFailed() && !cancelled && ffmpegWriter != null) {
                 new GuiRenderingDone(ReplayModRender.instance, ffmpegWriter.getVideoFile(), totalFrames, settings).display();
             }
         } catch (FFmpegWriter.FFmpegStartupException e) {
@@ -466,7 +484,7 @@ public class VideoRenderer implements RenderInfo {
         //$$ }
         //#endif
 
-        mc.currentScreen = gui.toMinecraft();
+        mc.currentScreen = interactive ? gui.toMinecraft() : null;
     }
 
     private void tick() {
@@ -482,6 +500,14 @@ public class VideoRenderer implements RenderInfo {
     }
 
     public boolean drawGui() {
+        if (!interactive) {
+            Window window = mc.getWindow();
+            if (GLFW.glfwWindowShouldClose(window.getHandle())) cancel();
+            GLFW.glfwPollEvents();
+            // Poll the client queue even while paused so remote resume/cancel remain reachable.
+            ((MCVer.MinecraftMethodAccessor) mc).replayModExecuteTaskQueue();
+            return !hasFailed() && !cancelled;
+        }
         Window window = mc.getWindow();
         do {
             if (GLFW.glfwWindowShouldClose(window.getHandle()) || ((MinecraftAccessor) mc).getCrashReporter() != null) {

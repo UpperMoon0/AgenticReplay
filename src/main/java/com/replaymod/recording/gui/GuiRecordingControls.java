@@ -34,30 +34,12 @@ public class GuiRecordingControls extends EventRegistrations {
 
     private GuiButton buttonPauseResume = new GuiButton(panel).onClick(() -> {
         if (Utils.ifMinimalModeDoPopup(panel, () -> {})) return;
-        if (paused) {
-            packetListener.addMarker(MarkerProcessor.MARKER_NAME_END_CUT);
-        } else {
-            packetListener.addMarker(MarkerProcessor.MARKER_NAME_START_CUT);
-        }
-        paused = !paused;
-        updateState();
+        setPaused(!paused);
     }).setSize(98, 20);
 
     private GuiButton buttonStartStop = new GuiButton(panel).onClick(() -> {
         if (Utils.ifMinimalModeDoPopup(panel, () -> {})) return;
-        if (stopped) {
-            paused = false;
-            packetListener.addMarker(MarkerProcessor.MARKER_NAME_END_CUT);
-            core.printInfoToChat("replaymod.chat.recordingstarted");
-        } else {
-            int timestamp = (int) packetListener.getCurrentDuration();
-            if (!paused) {
-                packetListener.addMarker(MarkerProcessor.MARKER_NAME_START_CUT, timestamp);
-            }
-            packetListener.addMarker(MarkerProcessor.MARKER_NAME_SPLIT, timestamp + 1);
-        }
-        stopped = !stopped;
-        updateState();
+        setStopped(!stopped);
     }).setSize(98, 20);
 
     public GuiRecordingControls(ReplayMod core, PacketListener packetListener, boolean autoStart) {
@@ -66,6 +48,31 @@ public class GuiRecordingControls extends EventRegistrations {
 
         paused = stopped = !autoStart;
 
+        updateState();
+    }
+
+    /** Pause/resume preserves ReplayMod's marker-based cut semantics. */
+    public void setPaused(boolean value) {
+        if (stopped) throw new IllegalStateException("Recording is stopped");
+        if (paused == value) return;
+        packetListener.addMarker(value ? MarkerProcessor.MARKER_NAME_START_CUT : MarkerProcessor.MARKER_NAME_END_CUT);
+        paused = value;
+        updateState();
+    }
+
+    /** Stop splits the recording; packet capture continues until disconnect. */
+    public void setStopped(boolean value) {
+        if (stopped == value) return;
+        if (!value) {
+            paused = false;
+            packetListener.addMarker(MarkerProcessor.MARKER_NAME_END_CUT);
+            core.printInfoToChat("replaymod.chat.recordingstarted");
+        } else {
+            int timestamp = (int) packetListener.getCurrentDuration();
+            if (!paused) packetListener.addMarker(MarkerProcessor.MARKER_NAME_START_CUT, timestamp);
+            packetListener.addMarker(MarkerProcessor.MARKER_NAME_SPLIT, timestamp + 1);
+        }
+        stopped = value;
         updateState();
     }
 

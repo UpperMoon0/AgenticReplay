@@ -98,6 +98,7 @@ public class ReplayMod implements Module, Scheduler {
         modules.add(new ReplayModEditor(this));
         modules.add(new ReplayModExtras(this));
         modules.add(new ReplayModCompat());
+        modules.add(new com.replaymod.agent.AgentApiServer(this));
 
         settingsRegistry.register();
     }
