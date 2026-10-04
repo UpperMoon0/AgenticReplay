@@ -3,6 +3,11 @@ package com.replaymod.agent;
 import com.google.gson.*;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.replaymod.core.ReplayMod;
+import com.replaymod.editor.gui.MarkerProcessor;
+import com.replaymod.replay.NoGuiScreenshot;
+import org.apache.commons.lang3.tuple.Pair;
+import javax.imageio.ImageIO;
+import java.io.ByteArrayOutputStream;
 import com.replaymod.core.SettingsRegistry;
 import com.replaymod.core.utils.ModCompat;
 import com.replaymod.pathing.player.RealtimeTimelinePlayer;
@@ -34,10 +39,20 @@ public final class AgentReplayApi {
         "recording.set", "recording.marker", "markers.list", "markers.set",
         "path.get", "path.keyframe", "path.remove", "path.move", "path.clear", "path.interpolation",
         "path.undo", "path.redo", "path.save", "path.load", "path.play", "path.stop",
+        "path.repository", "path.import", "path.export", "path.preview", "camera.options",
+        "capture.start", "capture.status", "replay.process", "process.status",
         "settings.get", "settings.set", "render.start", "render.status", "render.pause", "render.cancel");
     private final ReplayMod core;
     private final Gson gson = new Gson();
-    private Path activeFile;
+    private String captureId;
+    private String captureState = "idle";
+    private String captureData;
+    private String captureError;
+    private String processId;
+    private volatile String processState = "idle";
+    private volatile float processProgress;
+    private volatile String processError;
+    private volatile List<String> processOutputs = List.of();
     private VideoRenderer renderer;
     private String jobId;
     private String jobState = "idle";
@@ -56,6 +71,10 @@ public final class AgentReplayApi {
         if (rendering && !List.of("capabilities", "status", "render.status", "render.pause", "render.cancel").contains(method)) {
             throw new IllegalStateException("Render in progress; cancel or wait before changing the replay");
         }
+        if (processState.equals("running") && !List.of("capabilities", "status", "process.status").contains(method))
+            throw new IllegalStateException("Replay processing in progress");
+        if (captureState.equals("queued") && !List.of("capabilities", "status", "capture.status").contains(method))
+            throw new IllegalStateException("Screenshot capture pending");
         switch (method) {
             case "capabilities": return gson.toJsonTree(Map.of("apiVersion", API_VERSION, "methods", METHODS,
                     "recordingSemantics", "pause/stop use cut/split markers; disconnect finalizes capture",
@@ -86,11 +105,11 @@ public final class AgentReplayApi {
                             throw new IllegalArgumentException("Replay mod mismatch; set allowModMismatch explicitly");
                     }
                     ReplayModReplay.instance.startReplay(file, false, true);
-                    activeFile = path;
+
                 } catch (Exception failure) { file.close(); throw failure; }
                 return status();
             }
-            case "replay.close": stopPath(); replay().endReplay(); activeFile = null; return status();
+            case "replay.close": stopPath(); replay().endReplay(); return status();
             case "replay.rename": {
                 requireClosed();
                 Path source = replayPath(text(p, "name"));
@@ -190,9 +209,17 @@ public final class AgentReplayApi {
                     float yaw = (float) number(p, "yaw", c.getYaw()), pitch = (float) number(p, "pitch", c.getPitch()),
                             roll = (float) number(p, "roll", c.roll);
                     int entity = integer(p, "entityId", -1);
-                    if (entity != -1) throw new IllegalArgumentException("Use camera position keyframes; spectator path tracking is not yet exposed");
-                    if (timeline.isPositionKeyframe(time)) timeline.getTimeline().pushChange(timeline.updatePositionKeyframe(time, x, y, z, yaw, pitch, roll));
-                    else timeline.addPositionKeyframe(time, x, y, z, yaw, pitch, roll, -1);
+                    if (entity != -1) {
+                        if (core.getMinecraft().world.getEntityById(entity) == null) throw new IllegalArgumentException("Entity not found");
+                        var tracker = pathing().getGuiPathing().getEntityTracker();
+                        if (tracker == null) throw new IllegalStateException("Entity tracker loading; retry after status");
+                        timeline.setEntityTracker(tracker);
+                    }
+                    if (timeline.isPositionKeyframe(time) && (entity != -1 || timeline.isSpectatorKeyframe(time))) {
+                        timeline.removePositionKeyframe(time);
+                        timeline.addPositionKeyframe(time, x, y, z, yaw, pitch, roll, entity);
+                    } else if (timeline.isPositionKeyframe(time)) timeline.getTimeline().pushChange(timeline.updatePositionKeyframe(time, x, y, z, yaw, pitch, roll));
+                    else timeline.addPositionKeyframe(time, x, y, z, yaw, pitch, roll, entity);
                 } else throw new IllegalArgumentException("type must be position or time");
                 return pathJson();
             }
@@ -239,6 +266,80 @@ public final class AgentReplayApi {
                 return status();
             }
             case "path.stop": stopPath(); return status();
+            case "path.repository": {
+                var file = replay().getReplayFile();
+                synchronized (file) { return gson.toJsonTree(file.getTimelines(new SPTimeline()).keySet()); }
+            }
+            case "path.export": return pathJson();
+            case "path.import": {
+                requireNoPath();
+                var serialization = new TimelineSerialization(new SPTimeline(), null);
+                Map<String, Timeline> paths = serialization.deserialize(p.get("timeline").toString());
+                if (paths.isEmpty()) throw new IllegalArgumentException("No timeline supplied");
+                Timeline selected = paths.getOrDefault(string(p, "name", ""), paths.values().iterator().next());
+                for (var path : selected.getPaths()) {
+                    if (path.getKeyframes().size() > 10000) throw new IllegalArgumentException("Too many keyframes");
+                    for (var frame : path.getKeyframes())
+                        if (frame.getTime() < 0 || frame.getTime() > 86400000) throw new IllegalArgumentException("Invalid keyframe time");
+                }
+                pathing().setCurrentTimeline(new SPTimeline(selected)); return pathJson();
+            }
+            case "path.preview": {
+                requireNoPath();
+                timeline().getTimeline().applyToGame(pathTime(p, "time"), replay()); return status();
+            }
+            case "camera.options": {
+                requireNoPath();
+                replay().setSuppressCameraMovements(bool(p, "suppressMovement", true));
+                core.getMinecraft().options.hudHidden = bool(p, "hideHud", true);
+                replay().getOverlay().setVisible(bool(p, "overlay", false)); return status();
+            }
+            case "capture.start": {
+                replay();
+                int width = integer(p, "width", 1280), height = integer(p, "height", 720);
+                if (width < 16 || height < 16 || width > 1920 || height > 1920 || (long) width * height > 2073600) throw new IllegalArgumentException("Capture size must be 16..1920");
+                boolean thumbnail = bool(p, "thumbnail", false);
+                var file = replay().getReplayFile();
+                captureId = UUID.randomUUID().toString(); captureState = "queued"; captureData = null; captureError = null;
+                var future = NoGuiScreenshot.take(core.getMinecraft(), width, height);
+                future.addListener(() -> {
+                    try {
+                        var shot = future.get().getImage().toBufferedImage();
+                        if (thumbnail) {
+                            var rgb = new java.awt.image.BufferedImage(shot.getWidth(), shot.getHeight(), java.awt.image.BufferedImage.TYPE_3BYTE_BGR);
+                            var graphics = rgb.getGraphics(); graphics.drawImage(shot, 0, 0, null); graphics.dispose();
+                            synchronized (file) { file.writeThumb(rgb); }
+                        }
+                        ByteArrayOutputStream output = new ByteArrayOutputStream(); ImageIO.write(shot, "PNG", output);
+                        if (output.size() > 6 * 1024 * 1024) throw new IllegalStateException("Capture exceeds transfer limit; reduce dimensions");
+                        captureData = Base64.getEncoder().encodeToString(output.toByteArray()); captureState = "succeeded";
+                    } catch (Exception failure) { captureError = failure.toString(); captureState = "failed"; }
+                }, Runnable::run);
+                return captureStatus();
+            }
+            case "capture.status":
+                if (captureId == null || !captureId.equals(text(p, "captureId"))) throw new IllegalArgumentException("Unknown capture");
+                return captureStatus();
+            case "replay.process": {
+                requireClosed();
+                Path source = replayPath(text(p, "name"));
+                try (var file = core.files.open(source)) {
+                    if (!MarkerProcessor.producesAnyOutput(file)) throw new IllegalArgumentException("Markers exclude the entire replay");
+                }
+                processId = UUID.randomUUID().toString(); processState = "running"; processError = null;
+                processOutputs = List.of(); processProgress = 0;
+                Thread worker = new Thread(() -> {
+                    try {
+                        var outputs = MarkerProcessor.apply(source, progress -> processProgress = progress);
+                        processOutputs = outputs.stream().map(output -> output.getLeft().getFileName().toString()).toList();
+                        processProgress = 1; processState = "succeeded";
+                    } catch (Exception failure) { processError = failure.toString(); processState = "failed"; }
+                }, "AgenticReplay marker processing");
+                worker.setDaemon(true); worker.start(); return processStatus();
+            }
+            case "process.status":
+                if (processId == null || !processId.equals(text(p, "processId"))) throw new IllegalArgumentException("Unknown processing job");
+                return processStatus();
             case "settings.get": {
                 JsonObject out = new JsonObject();
                 for (var key : core.getSettingsRegistry().getSettings())
@@ -338,7 +439,20 @@ public final class AgentReplayApi {
         var controls = ReplayModRecording.instance.getConnectionEventHandler().getGuiControls();
         result.addProperty("recordingAvailable", controls != null);
         if (controls != null) { result.addProperty("recordingStopped", controls.isStopped()); result.addProperty("recordingPaused", controls.isPaused()); }
-        result.add("render", renderStatus()); return result;
+        result.addProperty("entityTrackerReady", r != null && pathing().getGuiPathing().getEntityTracker() != null);
+        result.add("render", renderStatus()); result.add("capture", captureSummary()); result.add("process", processStatus()); return result;
+    }
+    private JsonObject captureSummary() {
+        JsonObject out = captureStatus(); out.remove("pngBase64"); return out;
+    }
+    private JsonObject captureStatus() {
+        JsonObject out = new JsonObject(); out.addProperty("captureId", captureId); out.addProperty("state", captureState);
+        out.addProperty("error", captureError); out.addProperty("pngBase64", captureData); return out;
+    }
+    private JsonObject processStatus() {
+        JsonObject out = new JsonObject(); out.addProperty("processId", processId); out.addProperty("state", processState);
+        out.addProperty("progress", processProgress); out.addProperty("error", processError);
+        out.add("outputs", gson.toJsonTree(processOutputs)); return out;
     }
     private ReplayHandler replay() {
         var replay = ReplayModReplay.instance.getReplayHandler();
@@ -371,7 +485,9 @@ public final class AgentReplayApi {
     private Path replayPath(String name) throws java.io.IOException { return ApiPaths.resolve(core.folders.getReplayFolder(), name, ".mcpr"); }
     private SPTimeline.SPPath pathType(JsonObject p) { return SPTimeline.SPPath.valueOf(text(p, "type").toUpperCase(Locale.ROOT)); }
     private static long pathTime(JsonObject p, String key) {
-        long time = p.has(key) ? p.get(key).getAsLong() : 0;
+        double numeric = number(p, key, 0);
+        if (numeric != Math.rint(numeric)) throw new IllegalArgumentException("Path time must be an integer");
+        long time = (long) numeric;
         if (time < 0 || time > 86400000) throw new IllegalArgumentException("Path time must be 0..86400000 milliseconds"); return time;
     }
     @SuppressWarnings({"rawtypes", "unchecked"})

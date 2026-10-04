@@ -28,14 +28,14 @@ A timeout has an uncertain outcome if execution already began: inspect state bef
 | Area | Methods |
 | --- | --- |
 | State | capabilities, status |
-| Files | replay.list/open/close/rename/delete |
+| Files | replay.list/open/close/rename/delete/process, process.status |
 | Playback | playback.set (speed 0 pauses), playback.seek |
-| Camera | camera.set, camera.spectate, entities.list |
+| Camera | camera.set/options/spectate, entities.list |
 | Recording | recording.set, recording.marker |
 | Markers | markers.list/set |
-| Paths | path.get/keyframe/remove/move/clear/interpolation/undo/redo/save/load/play/stop |
+| Paths | path.get/keyframe/remove/move/clear/interpolation/undo/redo/save/load/play/stop/repository/import/export/preview |
 | Settings | settings.get/set |
-| Export | render.start/status/pause/cancel |
+| Export | render.start/status/pause/cancel, capture.start/status |
 
 Example cinematic:
 ```json
@@ -58,5 +58,15 @@ Pause/stop use ReplayMod cut/split markers; packet capture continues until disco
 API-enabled sessions finalize to the replay directory without a rename dialog.
 Compatibility mismatches return an error; explicitly pass `allowModMismatch:true` to replay.open to proceed.
 
-This is the initial control API, not a claim that every extra/plugin feature is exposed. Runtime modpack and shader compatibility must be tested with the actual client.
+Position keyframes also accept `entityId` for spectator paths; wait for `entityTrackerReady` in status.
+`path.import` accepts a `timeline` object using the ReplayStudio serialization returned by path.export, optionally a saved path `name`.
+`path.repository` lists saved path names; `path.preview` applies the path at a supplied time without playback.
+`camera.options` controls `suppressMovement`, `hideHud`, and `overlay`.
+
+`capture.start` accepts width/height and optional `thumbnail:true`; poll capture.status with captureId for a PNG base64 preview.
+Capture is queued and cannot overlap mutations. `replay.process` applies cut/split markers to a closed replay and returns processId;
+poll process.status for progress and output file names. Originals are retained in ReplayMod's raw directory.
+Marker names `_RM_START_CUT`, `_RM_END_CUT`, and `_RM_SPLIT` provide unattended trimming/splitting through markers.set and replay.process.
+
+Runtime modpack and shader compatibility must be tested with the actual client. Third-party extensions and online publishing integrations are outside this client-control API.
 GPL-3.0-or-later; upstream credits and mod identifiers are retained for compatibility.
