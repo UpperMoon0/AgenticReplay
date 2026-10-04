@@ -195,6 +195,8 @@ public class ConnectionEventHandler {
         }
     }
 
+    public GuiRecordingControls getGuiControls() { return guiControls; }
+
     public PacketListener getPacketListener() {
         return packetListener;
     }

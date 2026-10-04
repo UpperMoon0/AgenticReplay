@@ -278,9 +278,10 @@ public class PacketListener extends ChannelInboundHandlerAdapter {
             }
         });
 
+        boolean interactive = System.getProperty("agenticreplay.token", "").isEmpty();
         GuiSavingReplay guiSavingReplay = new GuiSavingReplay(core);
         new Thread(() -> {
-            core.runLater(guiSavingReplay::open);
+            if (interactive) core.runLater(guiSavingReplay::open);
 
             saveService.shutdown();
             try {
@@ -299,7 +300,7 @@ public class PacketListener extends ChannelInboundHandlerAdapter {
                 try {
                     if (!MarkerProcessor.producesAnyOutput(replayFile)) {
                         // Immediately close the saving popup, the user doesn't care about it
-                        core.runLater(guiSavingReplay::close);
+                        if (interactive) core.runLater(guiSavingReplay::close);
 
                         // If we crash right here, on the next start we'll prompt the user for recovery
                         // but we don't really want that, so drop a marker file to skip recovery for this replay.
@@ -332,12 +333,26 @@ public class PacketListener extends ChannelInboundHandlerAdapter {
                 } catch (Exception e) {
                     logger.error("Saving replay file:", e);
                     CrashReport crashReport = CrashReport.create(e, "Saving replay file");
-                    core.runLater(() -> Utils.error(logger, VanillaGuiScreen.wrap(mc.currentScreen), crashReport, guiSavingReplay::close));
+                    if (interactive) core.runLater(() -> Utils.error(logger, VanillaGuiScreen.wrap(mc.currentScreen), crashReport, guiSavingReplay::close));
                     return;
                 }
             }
 
-            core.runLater(() -> guiSavingReplay.presentRenameDialog(outputPaths));
+            if (interactive) core.runLater(() -> guiSavingReplay.presentRenameDialog(outputPaths));
+            else {
+                try {
+                    for (Pair<Path, ReplayMetaData> output : outputPaths) {
+                        Path source = output.getLeft();
+                        Path destination = core.folders.getReplayFolder().resolve(source.getFileName());
+                        if (!source.equals(destination)) {
+                            String base = FilenameUtils.getBaseName(source.getFileName().toString());
+                            for (int i = 1; Files.exists(destination); i++)
+                                destination = destination.resolveSibling(base + "." + i + ".mcpr");
+                            Files.move(source, destination);
+                        }
+                    }
+                } catch (IOException failure) { logger.error("Finalizing API recording", failure); }
+            }
         }).start();
     }
 
