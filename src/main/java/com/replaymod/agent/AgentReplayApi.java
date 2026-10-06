@@ -39,7 +39,7 @@ public final class AgentReplayApi {
         "path.get", "path.keyframe", "path.remove", "path.move", "path.clear", "path.interpolation",
         "path.undo", "path.redo", "path.save", "path.load", "path.play", "path.stop",
         "path.repository", "path.import", "path.export", "path.preview", "camera.options",
-        "capture.start", "capture.status", "replay.process", "process.status",
+        "capture.start", "capture.status", "capture.live", "client.hud", "replay.process", "process.status",
         "settings.get", "settings.set", "render.start", "render.status", "render.pause", "render.cancel",
         "client.connect", "client.background", "player.state", "player.input", "player.look", "player.select", "player.interact",
         "player.fly", "player.dismount", "player.inventory.click", "player.screen.close",
@@ -82,6 +82,36 @@ public final class AgentReplayApi {
         if (captureState.equals("queued") && !List.of("capabilities", "status", "capture.status", "player.stop").contains(method))
             throw new IllegalStateException("Screenshot capture pending");
         switch (method) {
+            case "client.hud": {
+                var mc = core.getMinecraft();
+                if (mc.world == null || mc.player == null || ReplayModReplay.instance.getReplayHandler() != null)
+                    throw new IllegalStateException("Live world required");
+                mc.options.debugEnabled = bool(p, "debug", false);
+                mc.options.hudHidden = bool(p, "hideHud", false);
+                JsonObject out = player.state();
+                out.addProperty("debug", mc.options.debugEnabled);
+                out.addProperty("hideHud", mc.options.hudHidden);
+                return out;
+            }
+            case "capture.live": {
+                var mc = core.getMinecraft();
+                if (mc.world == null || mc.player == null || mc.currentScreen != null
+                        || ReplayModReplay.instance.getReplayHandler() != null)
+                    throw new IllegalStateException("Live gameplay required");
+                if ((long) mc.getFramebuffer().textureWidth * mc.getFramebuffer().textureHeight > 2073600)
+                    throw new IllegalArgumentException("Live capture is limited to 1920x1080 pixels");
+                try (var shot = new de.johni0702.minecraft.gui.versions.Image(
+                        net.minecraft.client.util.ScreenshotRecorder.takeScreenshot(mc.getFramebuffer()))) {
+                    ByteArrayOutputStream output = new ByteArrayOutputStream();
+                    ImageIO.write(shot.toBufferedImage(), "PNG", output);
+                    if (output.size() > 6 * 1024 * 1024) throw new IllegalStateException("Capture exceeds transfer limit");
+                    JsonObject out = new JsonObject();
+                    out.addProperty("width", shot.getWidth()); out.addProperty("height", shot.getHeight());
+                    out.addProperty("pngBase64", Base64.getEncoder().encodeToString(output.toByteArray()));
+                    out.add("player", player.state());
+                    return out;
+                }
+            }
             case "client.background": {
                 core.getMinecraft().options.pauseOnLostFocus = !PlayerActionPlan.bool(p, "enabled");
                 if (p.has("hidden")) {

@@ -67,6 +67,12 @@ Position keyframes also accept `entityId` for spectator paths; wait for `entityT
 `path.repository` lists saved path names; `path.preview` applies the path at a supplied time without playback.
 `camera.options` controls `suppressMovement`, `hideHud`, and `overlay`.
 
+For live player evidence, `client.hud` accepts `debug` and `hideHud` booleans.
+`capture.live` returns the current game framebuffer as PNG base64 with its
+dimensions and fresh player state. It retains the actual HUD/F3 display, requires
+live gameplay with no screen or replay open, and is bounded to 1920x1080 pixels
+and 6 MiB. It neither renders a replacement camera nor reads the desktop.
+
 `capture.start` accepts width/height and optional `thumbnail:true`; poll capture.status with captureId for a PNG base64 preview.
 Capture is queued and cannot overlap mutations. `replay.process` applies cut/split markers to a closed replay and returns processId;
 poll process.status for progress and output file names. Originals are retained in ReplayMod's raw directory.
