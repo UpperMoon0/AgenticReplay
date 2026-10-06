@@ -21,6 +21,7 @@
     //"GuiScreenAccessor",
     "KeyBindingAccessor",
     "MixinAgentBackgroundWindow",
+    "MixinAgentReplayViewDistance",
     "MinecraftAccessor",
     //#if MC>=11900
     "SimpleOptionAccessor",
