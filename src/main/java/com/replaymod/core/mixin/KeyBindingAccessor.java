@@ -6,6 +6,8 @@ import org.spongepowered.asm.mixin.gen.Accessor;
 
 @Mixin(KeyBinding.class)
 public interface KeyBindingAccessor {
+    @Accessor("pressed")
+    void agenticSetPressed(boolean pressed);
     @Accessor("timesPressed")
     int getPressTime();
     @Accessor("timesPressed")

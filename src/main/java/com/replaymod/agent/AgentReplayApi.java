@@ -31,7 +31,7 @@ import java.util.*;
  * All calls must run on the Minecraft client thread.
  */
 public final class AgentReplayApi {
-    public static final int API_VERSION = 1;
+    public static final int API_VERSION = 2;
     public static final List<String> METHODS = List.of(
         "capabilities", "status", "replay.list", "replay.open", "replay.close", "replay.rename", "replay.delete",
         "playback.set", "playback.seek", "camera.set", "camera.spectate", "entities.list",
@@ -40,8 +40,12 @@ public final class AgentReplayApi {
         "path.undo", "path.redo", "path.save", "path.load", "path.play", "path.stop",
         "path.repository", "path.import", "path.export", "path.preview", "camera.options",
         "capture.start", "capture.status", "replay.process", "process.status",
-        "settings.get", "settings.set", "render.start", "render.status", "render.pause", "render.cancel");
+        "settings.get", "settings.set", "render.start", "render.status", "render.pause", "render.cancel",
+        "client.connect", "client.background", "player.state", "player.input", "player.look", "player.select", "player.interact",
+        "player.fly", "player.dismount", "player.inventory.click", "player.screen.close",
+        "player.sequence", "player.sequence.status", "player.stop");
     private final ReplayMod core;
+    private final LivePlayerControls player;
     private final Gson gson = new Gson();
     private String captureId;
     private String captureState = "idle";
@@ -61,20 +65,61 @@ public final class AgentReplayApi {
     private RealtimeTimelinePlayer pathPlayer;
     private ListenableFuture<Void> pathFuture;
 
-    public AgentReplayApi(ReplayMod core) { this.core = core; }
+    public AgentReplayApi(ReplayMod core) { this.core = core; this.player = new LivePlayerControls(core.getMinecraft()); }
+    void tickPlayer() { player.tick(); }
+    void stopPlayer(String reason) { player.stop(reason); }
+    boolean holdingAttack() { return player.holdingAttack(); }
 
     public JsonElement call(String method, JsonObject p) throws Exception {
         if (!core.getMinecraft().isOnThread()) throw new IllegalStateException("Client thread required");
         if (!METHODS.contains(method)) throw new IllegalArgumentException("Unknown method: " + method);
         boolean rendering = jobState.equals("queued") || jobState.equals("running");
-        if (rendering && !List.of("capabilities", "status", "render.status", "render.pause", "render.cancel").contains(method)) {
+        if (rendering && !List.of("capabilities", "status", "render.status", "render.pause", "render.cancel", "player.stop").contains(method)) {
             throw new IllegalStateException("Render in progress; cancel or wait before changing the replay");
         }
-        if (processState.equals("running") && !List.of("capabilities", "status", "process.status").contains(method))
+        if (processState.equals("running") && !List.of("capabilities", "status", "process.status", "player.stop").contains(method))
             throw new IllegalStateException("Replay processing in progress");
-        if (captureState.equals("queued") && !List.of("capabilities", "status", "capture.status").contains(method))
+        if (captureState.equals("queued") && !List.of("capabilities", "status", "capture.status", "player.stop").contains(method))
             throw new IllegalStateException("Screenshot capture pending");
         switch (method) {
+            case "client.background": {
+                core.getMinecraft().options.pauseOnLostFocus = !PlayerActionPlan.bool(p, "enabled");
+                return player.state();
+            }
+            case "player.state": return player.state();
+            case "player.input": return player.single("input", p);
+            case "player.look": return player.single("look", p);
+            case "player.select": return player.single("select", p);
+            case "player.fly": return player.single("fly", p);
+            case "player.dismount": return player.single("dismount", p);
+            case "player.inventory.click": return player.single("click_slot", p);
+            case "player.screen.close": return player.single("close_screen", p);
+            case "player.interact": {
+                String action = PlayerActionPlan.text(p, "action");
+                if (!Set.of("use", "attack").contains(action)) throw new IllegalArgumentException("action must be use or attack");
+                return player.single(action, p);
+            }
+            case "player.sequence": {
+                if (!p.has("steps") || !p.get("steps").isJsonArray()) throw new IllegalArgumentException("steps array required");
+                return player.start(p.getAsJsonArray("steps"));
+            }
+            case "player.sequence.status": return player.job(PlayerActionPlan.text(p, "jobId"));
+            case "player.stop": player.stop("Stopped by API"); return player.job();
+            case "client.connect": {
+                var mc = core.getMinecraft();
+                if (mc.world != null || ReplayModReplay.instance.getReplayHandler() != null || mc.currentScreen instanceof net.minecraft.client.gui.screen.ConnectScreen)
+                    throw new IllegalStateException("Disconnect before connecting to another server");
+                String address = PlayerActionPlan.text(p, "address");
+                if (address.length() > 255 || !net.minecraft.client.network.ServerAddress.isValid(address))
+                    throw new IllegalArgumentException("Invalid server address");
+                if (!p.has("recording") || PlayerActionPlan.bool(p, "recording")) {
+                    core.getSettingsRegistry().set(com.replaymod.recording.Setting.RECORD_SERVER, true);
+                    core.getSettingsRegistry().set(com.replaymod.recording.Setting.AUTO_START_RECORDING, true);
+                } else core.getSettingsRegistry().set(com.replaymod.recording.Setting.RECORD_SERVER, false);
+                net.minecraft.client.gui.screen.ConnectScreen.connect(new net.minecraft.client.gui.screen.TitleScreen(), mc,
+                    net.minecraft.client.network.ServerAddress.parse(address), new net.minecraft.client.network.ServerInfo("AgenticReplay", address, false), false);
+                return player.state();
+            }
             case "capabilities": return gson.toJsonTree(Map.of("apiVersion", API_VERSION, "methods", METHODS,
                     "recordingSemantics", "pause/stop use cut/split markers; disconnect finalizes capture",
                     "requiresClient", true));
@@ -109,6 +154,7 @@ public final class AgentReplayApi {
                 return status();
             }
             case "client.disconnect": {
+                player.stop("Client disconnect");
                 if (ReplayModReplay.instance.getReplayHandler() != null) {
                     stopPath(); replay().endReplay();
                 } else {
@@ -455,7 +501,8 @@ public final class AgentReplayApi {
         result.addProperty("recordingAvailable", controls != null);
         if (controls != null) { result.addProperty("recordingStopped", controls.isStopped()); result.addProperty("recordingPaused", controls.isPaused()); }
         result.addProperty("entityTrackerReady", r != null && pathing().getGuiPathing().getEntityTracker() != null);
-        result.add("render", renderStatus()); result.add("capture", captureSummary()); result.add("process", processStatus()); return result;
+        result.add("render", renderStatus()); result.add("capture", captureSummary()); result.add("process", processStatus());
+        result.add("player", player.state()); return result;
     }
     private JsonObject captureSummary() {
         JsonObject out = captureStatus(); out.remove("pngBase64"); return out;

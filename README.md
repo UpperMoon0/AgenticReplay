@@ -28,6 +28,9 @@ A timeout has an uncertain outcome if execution already began: inspect state bef
 | Area | Methods |
 | --- | --- |
 | State | capabilities, status |
+| Live client | client.connect/disconnect/background, player.state/stop |
+| Live actor | player.input/look/select/interact/fly/dismount, player.inventory.click, player.screen.close |
+| Actor sequences | player.sequence, player.sequence.status |
 | Files | replay.list/open/close/rename/delete/process, process.status |
 | Playback | playback.set (speed 0 pauses), playback.seek |
 | Camera | camera.set/options/spectate, entities.list |
@@ -71,3 +74,90 @@ Marker names `_RM_START_CUT`, `_RM_END_CUT`, and `_RM_SPLIT` provide unattended 
 
 Runtime modpack and shader compatibility must be tested with the actual client. Third-party extensions and online publishing integrations are outside this client-control API.
 GPL-3.0-or-later; upstream credits and the internal `replaymod` identifier are retained for compatibility. Forge shows one AgenticReplay mod entry.
+
+## Live player control (0.5.0, API v2)
+
+The existing replay methods remain available. Live controls act on the real connected player and use
+Minecraft's native key processing, raycast, item/block/entity interaction, slot clicks, and flight ability packets.
+They do not teleport, extend reach, grant creative mode, spawn items, or bypass server permissions.
+Use replay `camera.*` and `path.*` for cinematic cameras; `player.*` operates only outside replay playback.
+
+Join using the existing authenticated client session:
+```json
+{"method":"client.connect","params":{"address":"your-server:25565","recording":true}}
+{"method":"player.state","params":{}}
+```
+Connecting is asynchronous. Poll `player.state` for `live:true` and `screen:"none"` before starting actions.
+Recording defaults to enabled before the connection so login/chunk packets are retained. `recording:false`
+explicitly disables multiplayer recording. Disconnect finalizes the recording as described above.
+
+For unattended filming while using other applications, add `-Dagenticreplay.background=true` before
+launching. This opts out of initial GLFW window focus and disables Minecraft's automatic pause menu on
+focus loss for this client session. `client.background` with `{"enabled":true}` can disable auto-pause
+for an already running client, or `enabled:false` can restore it. It does not focus the window or send
+desktop input. Close an existing menu with `player.screen.close`, then start a take. The setting is
+not explicitly saved by the API. Physical keys or mouse buttons in the Minecraft window still stop a take.
+
+`player.state` reports exact double-precision coordinates, yaw/pitch, dimension, life/ground/flight/riding state,
+selected hotbar slot (0..8), vehicle entity ID, crosshair target, current screen's simple class name,
+container `syncId`, container slots, cursor stack, and the latest action job. No player state is invented when disconnected.
+
+Actions are queued for client ticks. Each response includes `jobId`, `state`, `step`, `steps`, `stepTicks`,
+and `error`. Poll `player.sequence.status` with that `jobId` until `succeeded`, `failed`, or `cancelled`.
+Starting another action while one is active fails; use `player.stop` first. A successful job means the inputs
+were executed; use a state condition to establish server outcomes such as boarding or arrival.
+
+```json
+{"method":"player.look","params":{"yaw":90,"pitch":15,"ticks":20}}
+{"method":"player.input","params":{"keys":{"forward":true,"sprint":true},"ticks":40}}
+{"method":"player.select","params":{"slot":2}}
+{"method":"player.interact","params":{"action":"use"}}
+{"method":"player.fly","params":{"flying":true}}
+{"method":"player.dismount","params":{"ticks":4}}
+{"method":"player.stop","params":{}}
+```
+Run those examples separately after each previous job finishes. Input keys are `forward`, `back`, `left`,
+`right`, `jump`, `sneak`, `sprint`, `attack`, and `use`. A command holds only the supplied keys for its
+finite duration, then releases them. Use `player.input` to hold attack for normal survival block breaking
+or use for repeated placement. `player.interact` produces one native use/attack press at the crosshair.
+Looking interpolates along the shortest yaw arc, with pitch restricted to -90..90. Flight requires the
+server-provided `allowFlying` ability and an airborne player (except spectator mode); jump for a few
+ticks first when standing on the ground. Jump/sneak then provide normal vertical flight controls.
+
+Repeatable takes use one fully validated plan:
+```json
+{"method":"player.sequence","params":{"steps":[
+  {"action":"look","yaw":90,"pitch":10,"ticks":10},
+  {"action":"input","keys":{"forward":true},"ticks":20},
+  {"action":"use"},
+  {"action":"wait","until":{"riding":true},"ticks":100},
+  {"action":"wait","until":{"position":{"x":80.5,"y":512,"z":80.5,"tolerance":2}},"ticks":1200},
+  {"action":"dismount","ticks":4},
+  {"action":"wait","until":{"riding":false},"ticks":100}
+]}}
+```
+Coordinates here are illustrative; inspect the actual set and replace them before filming. Supported actions:
+`input`, `look`, `select`, `use`, `attack`, `fly`, `dismount`, `wait`, `assert`, `click_slot`, `close_screen`.
+The fields match the individual methods. `assert` requires an `until` condition and fails immediately
+when it is false. `wait` without `until` waits for its tick duration; with `until` it advances when all
+conditions match, and fails if its tick budget expires. Conditions support `riding`, `onGround`, `flying`,
+`slot`, `screen` (`none` or the class name from state), `dimension`, and `position` with x/y/z and optional
+distance `tolerance` (default 0.5, maximum 64 blocks).
+
+Inventory interaction requires a freshly inspected container identity:
+```json
+{"method":"player.inventory.click","params":{"syncId":4,"slotId":0,"button":0,"clickAction":"PICKUP"}}
+{"method":"player.screen.close","params":{}}
+```
+Supported click actions are `PICKUP`, `QUICK_MOVE`, `SWAP`, and `THROW`; button is 0/1, or hotbar 0..8
+for `SWAP`. A stale `syncId`, a closed screen, or an out-of-range slot fails before the click.
+These are native container operations; mod-specific non-container buttons are not exposed by this API.
+
+Limits: 1..128 steps, 1..1200 ticks per step, and at most 12000 ticks per sequence. Native one-shot actions
+take one tick; only input/look/wait/dismount have extended durations. A monotonic wall deadline also bounds
+slow ticks. Gameplay movement, looking, selection, interaction, flight, and dismounting require no open
+screen. Wait/assert/container operations may run with a screen open. Disconnect, death, player/world
+replacement, pause, failure, completion, API stop, or physical keyboard/mouse-button input releases all
+owned keys and cancels an active job when appropriate. Sneak/sprint leases work with toggle settings too.
+Mouse movement alone does not cancel a take. Only the latest job is retained, so save its result before
+starting a new one. There is no pathfinding or automatic terrain avoidance.

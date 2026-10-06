@@ -36,6 +36,13 @@ public abstract class MixinMinecraft
     //#if MC>=11400
     @Shadow protected abstract void handleInputEvents();
 
+    @com.llamalad7.mixinextras.injector.ModifyExpressionValue(method = "handleInputEvents",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/Mouse;isCursorLocked()Z"))
+    private boolean agenticHeldAttack(boolean cursorLocked) {
+        // Preserve vanilla's entire break-progress/cooldown path without capturing the desktop cursor.
+        return cursorLocked || com.replaymod.agent.AgentApiServer.holdingAttack();
+    }
+
     @Override
     public void replayModProcessKeyBinds() {
         handleInputEvents();
