@@ -93,7 +93,10 @@ explicitly disables multiplayer recording. Disconnect finalizes the recording as
 
 For unattended filming while using other applications, add `-Dagenticreplay.background=true` before
 launching. This opts out of initial GLFW window focus and disables Minecraft's automatic pause menu on
-focus loss for this client session. `client.background` with `{"enabled":true}` can disable auto-pause
+focus loss for this client session. The native window stays hidden and its framebuffer remains available
+for recording and export. Forge's separate early loading window must also be disabled with
+`earlyWindowControl=false` in the filming profile's `config/fml.toml`.
+`client.background` with `{"enabled":true,"hidden":true}` can hide an already running game window and disable auto-pause
 for an already running client, or `enabled:false` can restore it. It does not focus the window or send
 desktop input. Close an existing menu with `player.screen.close`, then start a take. The setting is
 not explicitly saved by the API. Physical keys or mouse buttons in the Minecraft window still stop a take.

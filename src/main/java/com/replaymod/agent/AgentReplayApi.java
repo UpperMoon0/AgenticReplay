@@ -84,6 +84,15 @@ public final class AgentReplayApi {
         switch (method) {
             case "client.background": {
                 core.getMinecraft().options.pauseOnLostFocus = !PlayerActionPlan.bool(p, "enabled");
+                if (p.has("hidden")) {
+                    boolean hidden = PlayerActionPlan.bool(p, "hidden");
+                    long handle = core.getMinecraft().getWindow().getHandle();
+                    if (hidden) org.lwjgl.glfw.GLFW.glfwHideWindow(handle);
+                    else {
+                        org.lwjgl.glfw.GLFW.glfwSetWindowAttrib(handle, org.lwjgl.glfw.GLFW.GLFW_FOCUS_ON_SHOW, org.lwjgl.glfw.GLFW.GLFW_FALSE);
+                        org.lwjgl.glfw.GLFW.glfwShowWindow(handle);
+                    }
+                }
                 return player.state();
             }
             case "player.state": return player.state();
@@ -158,6 +167,7 @@ public final class AgentReplayApi {
                 if (ReplayModReplay.instance.getReplayHandler() != null) {
                     stopPath(); replay().endReplay();
                 } else {
+                    if (core.getMinecraft().world != null) core.getMinecraft().world.disconnect();
                     core.getMinecraft().disconnect();
                     core.getMinecraft().setScreen(new net.minecraft.client.gui.screen.TitleScreen());
                 }
