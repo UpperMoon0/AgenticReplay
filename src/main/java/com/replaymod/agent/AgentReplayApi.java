@@ -384,6 +384,15 @@ public final class AgentReplayApi {
             }
             case "camera.options": {
                 requireNoPath();
+                replay();
+                if (p.has("viewDistance")) {
+                    int distance = integer(p, "viewDistance", 16);
+                    if (distance < 2 || distance > 32) throw new IllegalArgumentException("viewDistance must be 2..32");
+                    var mc = core.getMinecraft();
+                    mc.options.getViewDistance().setValue(distance);
+                    mc.options.setServerViewDistance(distance);
+                    mc.worldRenderer.reload();
+                }
                 replay().setSuppressCameraMovements(bool(p, "suppressMovement", true));
                 core.getMinecraft().options.hudHidden = bool(p, "hideHud", true);
                 replay().getOverlay().setVisible(bool(p, "overlay", false)); return status();

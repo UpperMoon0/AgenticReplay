@@ -30,6 +30,7 @@ A timeout has an uncertain outcome if execution already began: inspect state bef
 | State | capabilities, status |
 | Live client | client.connect/disconnect/background, player.state/stop |
 | Live actor | player.input/look/select/interact/fly/dismount, player.inventory.click, player.screen.close |
+| Offline replay view | camera.options accepts viewDistance 2..32, overriding the recorded server clamp for cinematic framing |
 | Actor sequences | player.sequence, player.sequence.status |
 | Files | replay.list/open/close/rename/delete/process, process.status |
 | Playback | playback.set (speed 0 pauses), playback.seek |
