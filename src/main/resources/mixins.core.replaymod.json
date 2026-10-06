@@ -20,6 +20,7 @@
     "MixinMinecraft",
     //"GuiScreenAccessor",
     "KeyBindingAccessor",
+    "MixinAgentBackgroundWindow",
     "MinecraftAccessor",
     //#if MC>=11900
     "SimpleOptionAccessor",
