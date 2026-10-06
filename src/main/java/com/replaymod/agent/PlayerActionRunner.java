@@ -8,6 +8,7 @@ import java.util.function.LongSupplier;
 final class PlayerActionRunner {
     interface Port {
         void guard();
+        boolean paused();
         void begin(PlayerActionPlan.Step step);
         void apply(PlayerActionPlan.Step step, int tick);
         boolean matches(JsonObject condition);
@@ -23,7 +24,7 @@ final class PlayerActionRunner {
 
     JsonObject start(List<PlayerActionPlan.Step> plan) {
         if (active()) throw new IllegalStateException("Player action active; stop it before starting another");
-        port.guard();
+        guard(plan.get(0));
         steps = plan; index = elapsed = 0; error = null;
         jobId = UUID.randomUUID().toString(); state = "queued";
         // Monotonic wall deadline also bounds slow ticks and unexpected client stalls.
@@ -31,10 +32,16 @@ final class PlayerActionRunner {
         return status();
     }
     boolean active() { return state.equals("queued") || state.equals("running"); }
+    private void guard(PlayerActionPlan.Step step) {
+        port.guard();
+        // Screen recovery must work even when a singleplayer menu pauses the client.
+        if (port.paused() && !step.action().equals("close_screen"))
+            throw new IllegalStateException("Client is paused");
+    }
     void tick() {
         if (!active()) return;
         try {
-            port.guard();
+            guard(steps.get(index));
             if (clock.getAsLong() > deadline) throw new IllegalStateException("Player action wall-time limit exceeded");
             state = "running";
             var step = steps.get(index);
@@ -47,6 +54,7 @@ final class PlayerActionRunner {
                     index++; elapsed = 0;
                     if (index == steps.size()) { state = "succeeded"; return; }
                     step = steps.get(index);
+                    guard(step);
                 }
             }
             if (elapsed == 0) port.begin(step);

@@ -57,8 +57,8 @@ final class LivePlayerControls implements PlayerActionRunner.Port {
         requireLive();
         if (mc.player != actor || mc.world != world) throw new IllegalStateException("Player or world changed");
         if (!actor.isAlive()) throw new IllegalStateException("Player is dead");
-        if (mc.isPaused()) throw new IllegalStateException("Client is paused");
     }
+    @Override public boolean paused() { return mc.isPaused(); }
     private void requireGameplay() {
         if (mc.currentScreen != null) throw new IllegalStateException("Close the screen before controlling gameplay");
         if (mc.getOverlay() != null) throw new IllegalStateException("Wait for the loading overlay to finish");

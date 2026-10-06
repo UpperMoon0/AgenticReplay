@@ -9,8 +9,9 @@ import static org.junit.Assert.*;
 public class PlayerActionRunnerTest {
     private static class FakePort implements PlayerActionRunner.Port {
         List<String> events = new ArrayList<>();
-        boolean held, valid = true, matched, failBegin;
+        boolean held, valid = true, matched, failBegin, paused;
         public void guard() { if (!valid) throw new IllegalStateException("World changed"); }
+        public boolean paused() { return paused; }
         public void begin(PlayerActionPlan.Step s) { events.add("begin:" + s.action()); if (failBegin) throw new IllegalStateException("Native failure"); }
         public void apply(PlayerActionPlan.Step s, int tick) { events.add(s.action() + ":" + tick); if (s.action().equals("input")) held = true; }
         public boolean matches(JsonObject condition) { return matched; }
@@ -18,6 +19,63 @@ public class PlayerActionRunnerTest {
     }
     private List<PlayerActionPlan.Step> plan(String json) { return PlayerActionPlan.parse(JsonParser.parseString(json).getAsJsonArray()); }
     private String state(PlayerActionRunner runner) { return runner.status().get("state").getAsString(); }
+
+    @Test public void screenRecoveryRunsWhilePauseStateIsStillSet() {
+        var port = new FakePort(); port.paused = true;
+        var runner = new PlayerActionRunner(port, () -> 0L);
+        runner.start(plan("[{\"action\":\"close_screen\"}]"));
+        runner.tick(); runner.tick();
+        assertEquals("succeeded", state(runner));
+        assertEquals(List.of("begin:close_screen", "close_screen:1", "release"), port.events);
+    }
+    @Test public void pausedClientRejectsEveryOtherActionBeforeQueueing() {
+        for (String step : List.of(
+                "{\"action\":\"input\",\"keys\":{\"forward\":true}}",
+                "{\"action\":\"look\",\"yaw\":0,\"pitch\":0}",
+                "{\"action\":\"select\",\"slot\":0}",
+                "{\"action\":\"use\"}", "{\"action\":\"attack\"}",
+                "{\"action\":\"fly\",\"flying\":true}", "{\"action\":\"dismount\"}",
+                "{\"action\":\"click_slot\",\"syncId\":1,\"slotId\":0}",
+                "{\"action\":\"wait\"}", "{\"action\":\"assert\",\"until\":{\"screen\":\"none\"}}")) {
+            var port = new FakePort(); port.paused = true;
+            var runner = new PlayerActionRunner(port, () -> 0L);
+            try { runner.start(plan("[" + step + "]")); fail("Accepted: " + step); }
+            catch (IllegalStateException expected) { assertEquals("Client is paused", expected.getMessage()); }
+            assertEquals("idle", state(runner)); assertTrue(port.events.isEmpty());
+        }
+    }
+    @Test public void pauseDuringGameplayReleasesInputs() {
+        var port = new FakePort(); var runner = new PlayerActionRunner(port, () -> 0L);
+        runner.start(plan("[{\"action\":\"input\",\"keys\":{\"forward\":true},\"ticks\":3}]"));
+        runner.tick(); assertTrue(port.held);
+        port.paused = true; runner.tick();
+        assertFalse(port.held); assertEquals("failed", state(runner));
+        assertEquals("Client is paused", runner.status().get("error").getAsString());
+        assertFalse(port.events.contains("input:2"));
+    }
+    @Test public void recoveryDoesNotBypassPauseOnNextSequenceStep() {
+        var port = new FakePort(); port.paused = true;
+        var runner = new PlayerActionRunner(port, () -> 0L);
+        runner.start(plan("[{\"action\":\"close_screen\"},{\"action\":\"attack\"}]"));
+        runner.tick(); runner.tick();
+        assertEquals("failed", state(runner)); assertFalse(port.events.contains("begin:attack"));
+        assertEquals("Client is paused", runner.status().get("error").getAsString());
+    }
+    @Test public void gameplayCanFollowRecoveryOnceClientUnpauses() {
+        var port = new FakePort(); port.paused = true;
+        var runner = new PlayerActionRunner(port, () -> 0L);
+        runner.start(plan("[{\"action\":\"close_screen\"},{\"action\":\"attack\"}]"));
+        runner.tick(); port.paused = false; runner.tick(); runner.tick();
+        assertEquals("succeeded", state(runner)); assertTrue(port.events.contains("begin:attack"));
+    }
+    @Test public void recoveryStillRequiresTheOriginalLiveContext() {
+        var port = new FakePort(); port.paused = true;
+        var runner = new PlayerActionRunner(port, () -> 0L);
+        runner.start(plan("[{\"action\":\"close_screen\"}]"));
+        port.valid = false; runner.tick();
+        assertEquals("failed", state(runner)); assertFalse(port.events.contains("begin:close_screen"));
+        assertEquals("World changed", runner.status().get("error").getAsString());
+    }
 
     @Test public void exactInputLeaseAndAutomaticRelease() {
         var port = new FakePort(); var runner = new PlayerActionRunner(port, () -> 0L);

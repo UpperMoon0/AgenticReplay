@@ -98,7 +98,9 @@ for recording and export. Forge's separate early loading window must also be dis
 `earlyWindowControl=false` in the filming profile's `config/fml.toml`.
 `client.background` with `{"enabled":true,"hidden":true}` can hide an already running game window and disable auto-pause
 for an already running client, or `enabled:false` can restore it. It does not focus the window or send
-desktop input. Close an existing menu with `player.screen.close`, then start a take. The setting is
+desktop input. Close an existing menu with `player.screen.close`, then start a take. Screen closing is
+allowed while paused; all other actions still reject a paused client. Poll the closing job and
+`player.state` until the screen is `none` and `paused` is false before starting gameplay. The setting is
 not explicitly saved by the API. Physical keys or mouse buttons in the Minecraft window still stop a take.
 
 `player.state` reports exact double-precision coordinates, yaw/pitch, dimension, life/ground/flight/riding state,
