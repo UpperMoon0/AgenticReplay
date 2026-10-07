@@ -23,6 +23,8 @@
     "ActorPlayerAccessor",
     "ActorEntityAccessor",
     "MixinActorDefaultSkin",
+    "MixinActorReplayMovement",
+    "MixinActorReplayPayload",
     "MixinAgentBackgroundWindow",
     "MixinAgentReplayViewDistance",
     "MinecraftAccessor",

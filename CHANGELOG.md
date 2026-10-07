@@ -2,6 +2,7 @@
 
 ## 0.6.0
 
+- Preserve actor movement/turning timing and instantaneous teleports in playback with exact actor frames alongside indexed vanilla packets.
 - Combine native capture, hidden-window diagnostics and replay-scoped view distance from PR #3.
 - Add 32 separately scripted film actors with independent identities, real-player skins, scenes and cancellation.
 - Preserve actors and signed/default skins in replay packets; include a two-character Python filming/export example.

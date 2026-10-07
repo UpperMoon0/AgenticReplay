@@ -16,6 +16,7 @@ public final class ActorDefaultSkin {
     static GameProfile character(UUID uuid, String name, GameProfile source) {
         GameProfile actor = new GameProfile(uuid, name);
         actor.getProperties().putAll(source.getProperties());
+        actor.getProperties().put(ActorReplayMovement.PROFILE_MARKER, new Property(ActorReplayMovement.PROFILE_MARKER, "1"));
         if (!hasCustomSkin(source))
             actor.getProperties().put(SOURCE, new Property(SOURCE, source.getId().toString()));
         return actor;

@@ -272,6 +272,10 @@ Physical keyboard/mouse takeover stops `player.*` automation; it does not cancel
 Actors' profile/skin properties, spawn/despawn, positions, rotations, poses, equipment and animations are
 written into the normal `.mcpr` packet stream. They remain visible when the replay is reopened and rendered;
 actor scripts do not run during playback. Skins use Minecraft's normal texture cache/service.
+New recordings also include an actor-frame extension: it preserves authored movement/rotation timing
+and makes teleports snap during playback/export, without vanilla remote-player interpolation delay.
+The normal position packets remain for replay indexing. Exact timing requires playback with this
+AgenticReplay version; older recordings without actor frames retain vanilla interpolation.
 Characters spawned before a recorder becomes available are registered when packet capture begins.
 
 `recording.set` accepts `start`, `pause`, `resume`, `stop`. Pause/stop use ReplayMod cut/split markers;

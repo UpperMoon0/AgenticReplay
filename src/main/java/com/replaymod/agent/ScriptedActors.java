@@ -182,6 +182,7 @@ final class ScriptedActors {
         String state = "loading", error;
         EntityPose pose = EntityPose.STANDING;
         boolean sprinting;
+        boolean teleportSnapshot;
         double startX, startY, startZ;
         float startYaw, startPitch;
         Actor(String id, String name, ClientWorld world, double x, double y, double z, float yaw, float pitch) {
@@ -196,7 +197,9 @@ final class ScriptedActors {
             startX = entity.getX(); startY = entity.getY(); startZ = entity.getZ();
             startYaw = entity.getYaw(); startPitch = entity.getPitch();
             switch (step.action()) {
-                case "teleport": entity.refreshPositionAndAngles(p.get("x").getAsDouble(), p.get("y").getAsDouble(), p.get("z").getAsDouble(), entity.getYaw(), entity.getPitch()); break;
+                case "teleport":
+                    entity.refreshPositionAndAngles(p.get("x").getAsDouble(), p.get("y").getAsDouble(), p.get("z").getAsDouble(), entity.getYaw(), entity.getPitch());
+                    teleportSnapshot = true; break;
                 case "pose":
                     pose = EntityPose.valueOf(ActorTimeline.text(p, "pose").toUpperCase(Locale.ROOT));
                     if (p.has("sprinting")) sprinting = ActorTimeline.bool(p, "sprinting");
@@ -244,13 +247,18 @@ final class ScriptedActors {
             recordEquipment();
         }
         void recordSnapshot() {
-            if (recorder == null) return;
+            if (recorder == null) { teleportSnapshot = false; return; }
             record(new EntityPositionS2CPacket(entity));
             record(new EntitySetHeadYawS2CPacket(entity, (byte) (entity.headYaw * 256 / 360)));
             record(new EntityVelocityUpdateS2CPacket(entity.getId(), entity.getVelocity()));
             var tracked = entity.getDataTracker().getDirtyEntries();
             if (tracked != null) record(new EntityTrackerUpdateS2CPacket(entity.getId(), tracked));
             recordEquipment();
+            var velocity = entity.getVelocity();
+            ActorReplayMovement.record(new ActorReplayMovement.Frame(entity.getId(), uuid,
+                    new ActorReplayMovement.Pose(entity.getX(), entity.getY(), entity.getZ(), entity.getYaw(), entity.getPitch(), entity.headYaw, entity.bodyYaw),
+                    velocity.x, velocity.y, velocity.z, teleportSnapshot), this::record);
+            teleportSnapshot = false;
         }
         void recordEquipment() {
             List<Pair<EquipmentSlot, ItemStack>> equipment = new ArrayList<>();
