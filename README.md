@@ -66,7 +66,7 @@ Compatibility mismatches return an error; explicitly pass `allowModMismatch:true
 Position keyframes also accept `entityId` for spectator paths; wait for `entityTrackerReady` in status.
 `path.import` accepts a `timeline` object using the ReplayStudio serialization returned by path.export, optionally a saved path `name`.
 `path.repository` lists saved path names; `path.preview` applies the path at a supplied time without playback.
-`camera.options` controls `suppressMovement`, `hideHud`, and `overlay`.
+`camera.options` controls `suppressMovement`, `hideHud`, and `overlay`. Its `viewDistance` override applies only to the current replay, survives seeks, and restores the previous client distance when the replay closes through the GUI, `replay.close`, or `client.disconnect`. A new replay starts with its recorded server clamp.
 
 For live player evidence, `client.hud` accepts `debug` and `hideHud` booleans.
 `capture.live` returns the current game framebuffer as PNG base64 with its

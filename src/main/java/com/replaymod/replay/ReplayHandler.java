@@ -5,6 +5,7 @@ import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.replaymod.agent.AgentReplayViewDistance;
 import com.replaymod.core.ReplayMod;
 import com.replaymod.core.mixin.MinecraftAccessor;
 import com.replaymod.core.mixin.TimerAccessor;
@@ -176,6 +177,7 @@ public class ReplayHandler {
 
     public ReplayHandler(ReplayFile replayFile, boolean asyncMode) throws IOException {
         Preconditions.checkState(mc.isOnThread(), "Must be called from Minecraft thread.");
+        AgentReplayViewDistance.clear();
         this.replayFile = replayFile;
 
         replayDuration = replayFile.getMetaData().getDuration();
@@ -225,6 +227,8 @@ public class ReplayHandler {
 
     public void endReplay() throws IOException {
         Preconditions.checkState(mc.isOnThread(), "Must be called from Minecraft thread.");
+        // Restore before callbacks or file I/O can fail during GUI/API shutdown.
+        AgentReplayViewDistance.clear();
 
         ReplayClosingCallback.EVENT.invoker().replayClosing(this);
 

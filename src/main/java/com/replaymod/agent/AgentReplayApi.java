@@ -175,7 +175,6 @@ public final class AgentReplayApi {
                 return files;
             }
             case "replay.open": {
-                AgentReplayViewDistance.clear();
                 if (core.getMinecraft().world != null && ReplayModReplay.instance.getReplayHandler() == null)
                     throw new IllegalStateException("Disconnect from the live world before opening a replay");
                 Path path = replayPath(text(p, "name"));
@@ -204,7 +203,7 @@ public final class AgentReplayApi {
                 }
                 return status();
             }
-            case "replay.close": stopPath(); replay().endReplay(); AgentReplayViewDistance.clear(); return status();
+            case "replay.close": stopPath(); replay().endReplay(); return status();
             case "replay.rename": {
                 requireClosed();
                 Path source = replayPath(text(p, "name"));
@@ -389,10 +388,9 @@ public final class AgentReplayApi {
                 if (p.has("viewDistance")) {
                     int distance = integer(p, "viewDistance", 16);
                     if (distance < 2 || distance > 32) throw new IllegalArgumentException("viewDistance must be 2..32");
-                    AgentReplayViewDistance.set(distance);
                     var mc = core.getMinecraft();
-                    mc.options.getViewDistance().setValue(distance);
-                    mc.options.setServerViewDistance(distance);
+                    AgentReplayViewDistance.set(distance, () -> mc.options.getViewDistance().getValue(),
+                            value -> mc.options.getViewDistance().setValue(value));
                     mc.worldRenderer.reload();
                 }
                 replay().setSuppressCameraMovements(bool(p, "suppressMovement", true));
