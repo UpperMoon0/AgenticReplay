@@ -4,6 +4,7 @@
 
 - Preserve actor movement/turning timing and instantaneous teleports in playback with exact actor frames alongside indexed vanilla packets.
 - Restore actor frames during Quick Mode seeks and exports; squash cut/split frame history to one boundary pose per surviving actor and omit unchanged idle motion.
+- Preserve the immediately preceding actor pose when catch-up frames share a timestamp, including teleport-then-move sequences in Quick Mode.
 - Combine native capture, hidden-window diagnostics and replay-scoped view distance from PR #3.
 - Add 32 separately scripted film actors with independent identities, real-player skins, scenes and cancellation.
 - Preserve actors and signed/default skins in replay packets; include a two-character Python filming/export example.

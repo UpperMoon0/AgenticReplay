@@ -123,6 +123,46 @@ public class ActorFrameProcessingTest {
         result.clear(); index.seek(100, result::add); assertEquals(2, result.get(0).previous().x(), 0);
         assertEquals(other, result.get(1).frame().uuid());
     }
+    @Test public void savedCatchUpMovesAtSameTimestampKeepTheImmediatelyPreviousPose() throws Exception {
+        assertSavedCatchUpInterval(2, 4, false);
+    }
+    @Test public void savedTeleportThenMoveAtSameTimestampKeepsTheTeleportDestination() throws Exception {
+        assertSavedCatchUpInterval(100, 101, true);
+    }
+    private void assertSavedCatchUpInterval(double first, double last, boolean teleport) throws Exception {
+        var file = temp.newFolder().toPath().resolve("catch-up.mcpr").toFile();
+        var studio = new com.replaymod.replaystudio.studio.ReplayStudio();
+        var metadata = new ReplayMetaData(); metadata.setProtocolVersion(763);
+        metadata.setFileFormatVersion(ReplayMetaData.CURRENT_FILE_FORMAT_VERSION); metadata.setDuration(200);
+        UUID other = UUID.randomUUID();
+        try (var replay = new ZipReplayFile(studio, file)) {
+            replay.writeMetaData(registry, metadata);
+            try (var output = replay.writePacketData()) {
+                output.write(0, ActorFramePackets.write(registry, frame(-10, uuid, 0, true)));
+                output.write(50, ActorFramePackets.write(registry, frame(-10, uuid, first, teleport)));
+                output.write(50, ActorFramePackets.write(registry, frame(-11, other, 8, true)));
+                output.write(50, ActorFramePackets.write(registry, frame(-10, uuid, last, false)));
+                output.write(150, ActorFramePackets.write(registry, frame(-10, uuid, last + 1, false)));
+            }
+            replay.save();
+        }
+        try (var replay = new ZipReplayFile(studio, file)) {
+            ActorFrameIndex index = ActorFrameIndex.load(replay, registry);
+            for (long time : new long[]{50, 75, 200, 150, 50, 0}) {
+                List<ActorFrameIndex.Selection> result = new ArrayList<>(); index.seek(time, result::add);
+                var selection = result.get(0);
+                assertEquals(uuid, selection.frame().uuid());
+                double expectedCurrent = time == 0 ? 0 : time >= 150 ? last + 1 : last;
+                double expectedPrevious = time == 0 ? 0 : time == 200 ? last + 1 : time == 150 ? last : first;
+                assertEquals(expectedCurrent, selection.frame().pose().x(), 0);
+                assertEquals("Authored interval at " + time, expectedPrevious, selection.previous().x(), 0);
+                if (time != 0) {
+                    assertEquals(2, result.size()); assertEquals(other, result.get(1).frame().uuid());
+                    assertEquals(8, result.get(1).previous().x(), 0);
+                }
+            }
+        }
+    }
     @Test public void otherAndMalformedPluginPacketsRemainWithTheVanillaFilter() throws Exception {
         ActorFrameSquashFilter filter = new ActorFrameSquashFilter(new DimensionTracker());
         net.minecraft.network.PacketByteBuf bytes = new net.minecraft.network.PacketByteBuf(io.netty.buffer.Unpooled.buffer());
