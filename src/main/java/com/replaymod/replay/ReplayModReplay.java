@@ -4,6 +4,7 @@ import com.google.common.base.Function;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.replaymod.agent.AgentReplayViewDistance;
 import com.replaymod.core.KeyBindingRegistry;
 import com.replaymod.core.Module;
 import com.replaymod.core.ReplayMod;
@@ -192,6 +193,7 @@ public class ReplayModReplay implements Module {
     }
 
     public void forcefullyStopReplay() {
+        AgentReplayViewDistance.clear();
         replayHandler = null;
         KeyBinding.updateKeysByCode(); // see Mixin_ContextualKeyBindings
     }

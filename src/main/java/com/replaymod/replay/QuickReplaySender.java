@@ -7,6 +7,9 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 import com.replaymod.core.mixin.MinecraftAccessor;
 import com.replaymod.core.mixin.TimerAccessor;
+import com.replaymod.agent.ActorFrameIndex;
+import com.replaymod.agent.ActorReplayMovement;
+import net.minecraft.client.network.OtherClientPlayerEntity;
 import com.replaymod.replaystudio.lib.viaversion.api.protocol.packet.State;
 import com.replaymod.replaystudio.replay.ReplayFile;
 import com.replaymod.replaystudio.rar.RandomAccessReplay;
@@ -48,6 +51,8 @@ public class QuickReplaySender extends ChannelHandlerAdapter implements ReplaySe
 
     private final ReplayModReplay mod;
     private final RandomAccessReplay replay;
+    private final ReplayFile replayFile;
+    private ActorFrameIndex actorFrames = new ActorFrameIndex();
     private final EventHandler eventHandler = new EventHandler();
     private ChannelHandlerContext ctx;
 
@@ -65,6 +70,7 @@ public class QuickReplaySender extends ChannelHandlerAdapter implements ReplaySe
 
     public QuickReplaySender(ReplayModReplay mod, ReplayFile replayFile) {
         this.mod = mod;
+        this.replayFile = replayFile;
         this.replay = new RandomAccessReplay(replayFile, getPacketTypeRegistry(State.PLAY)) {
             private byte[] buf = new byte[0];
 
@@ -143,6 +149,7 @@ public class QuickReplaySender extends ChannelHandlerAdapter implements ReplaySe
             try {
                 long start = System.currentTimeMillis();
                 replay.load(progress);
+                actorFrames = ActorFrameIndex.load(replayFile, getPacketTypeRegistry(State.PLAY));
                 LOGGER.info("Initialized quick replay sender in " + (System.currentTimeMillis() - start) + "ms");
             } catch (Throwable e) {
                 LOGGER.error("Initializing quick replay sender:", e);
@@ -250,6 +257,14 @@ public class QuickReplaySender extends ChannelHandlerAdapter implements ReplaySe
         ensureInitialized(() -> {
             try {
                 replay.seek(replayTime);
+                // Apply after cached spawns/positions, including backward seeks and synchronous exports.
+                actorFrames.seek(replayTime, selection -> {
+                    if (mc.world == null) return;
+                    var entity = mc.world.getEntityById(selection.frame().entityId());
+                    if (entity instanceof OtherClientPlayerEntity player
+                            && player.getGameProfile().getProperties().containsKey(ActorReplayMovement.PROFILE_MARKER))
+                        ((ActorReplayMovement.Target) player).actorReplayAccept(selection.frame(), selection.previous());
+                });
             } catch (IOException e) {
                 e.printStackTrace();
             }

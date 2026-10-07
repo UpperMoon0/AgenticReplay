@@ -30,6 +30,7 @@ A timeout has an uncertain outcome if execution already began: inspect state bef
 | State | capabilities, status |
 | Live client | client.connect/disconnect/background, player.state/stop |
 | Live actor | player.input/look/select/interact/fly/dismount, player.inventory.click, player.screen.close |
+| Offline replay view | camera.options accepts viewDistance 2..32, overriding the recorded server clamp for cinematic framing |
 | Actor sequences | player.sequence, player.sequence.status |
 | Files | replay.list/open/close/rename/delete/process, process.status |
 | Playback | playback.set (speed 0 pauses), playback.seek |
@@ -65,7 +66,13 @@ Compatibility mismatches return an error; explicitly pass `allowModMismatch:true
 Position keyframes also accept `entityId` for spectator paths; wait for `entityTrackerReady` in status.
 `path.import` accepts a `timeline` object using the ReplayStudio serialization returned by path.export, optionally a saved path `name`.
 `path.repository` lists saved path names; `path.preview` applies the path at a supplied time without playback.
-`camera.options` controls `suppressMovement`, `hideHud`, and `overlay`.
+`camera.options` controls `suppressMovement`, `hideHud`, and `overlay`. Its `viewDistance` override applies only to the current replay, survives seeks, and restores the previous client distance when the replay closes through the GUI, `replay.close`, or `client.disconnect`. A new replay starts with its recorded server clamp.
+
+For live player evidence, `client.hud` accepts `debug` and `hideHud` booleans.
+`capture.live` returns the current game framebuffer as PNG base64 with its
+dimensions and fresh player state. It retains the actual HUD/F3 display, requires
+live gameplay with no screen or replay open, and is bounded to 1920x1080 pixels
+and 6 MiB. It neither renders a replacement camera nor reads the desktop.
 
 `capture.start` accepts width/height and optional `thumbnail:true`; poll capture.status with captureId for a PNG base64 preview.
 Capture is queued and cannot overlap mutations. `replay.process` applies cut/split markers to a closed replay and returns processId;
@@ -75,7 +82,7 @@ Marker names `_RM_START_CUT`, `_RM_END_CUT`, and `_RM_SPLIT` provide unattended 
 Runtime modpack and shader compatibility must be tested with the actual client. Third-party extensions and online publishing integrations are outside this client-control API.
 GPL-3.0-or-later; upstream credits and the internal `replaymod` identifier are retained for compatibility. Forge shows one AgenticReplay mod entry.
 
-## Live player control (0.5.0, API v2)
+## Live player control (0.5.0, API v3)
 
 The existing replay methods remain available. Live controls act on the real connected player and use
 Minecraft's native key processing, raycast, item/block/entity interaction, slot clicks, and flight ability packets.
@@ -95,7 +102,10 @@ For unattended filming while using other applications, add `-Dagenticreplay.back
 launching. This opts out of initial GLFW window focus and disables Minecraft's automatic pause menu on
 focus loss for this client session. The native window stays hidden and its framebuffer remains available
 for recording and export. Forge's separate early loading window must also be disabled with
-`earlyWindowControl=false` in the filming profile's `config/fml.toml`.
+  `earlyWindowControl=false` in the filming profile's `config/fml.toml`.
+Keep each `-D` flag separated by whitespace. Native state reports GLFW's actual
+`glfwFocused` and `windowVisible` attributes; Minecraft's `windowFocused` field
+can initially be true before its first focus event even for a hidden window.
 `client.background` with `{"enabled":true,"hidden":true}` can hide an already running game window and disable auto-pause
 for an already running client, or `enabled:false` can restore it. It does not focus the window or send
 desktop input. Close an existing menu with `player.screen.close`, then start a take. Screen closing is
@@ -166,3 +176,127 @@ replacement, pause, failure, completion, API stop, or physical keyboard/mouse-bu
 owned keys and cancels an active job when appropriate. Sneak/sprint leases work with toggle settings too.
 Mouse movement alone does not cancel a take. Only the latest job is retained, so save its result before
 starting a new one. There is no pathfinding or automatic terrain avoidance.
+
+## Multiple scripted characters
+
+One filming client can create up to **32 independent characters** with distinct actor IDs, entity IDs,
+names and UUIDs. Each has its own script, progress, job ID and cancellation state. Their scripts never
+use the logged-in player's keyboard or mouse. Two characters can share a real player's skin
+while retaining separate identities.
+
+Characters are cinematic entities in this client: their movement is authored directly, so paths can walk,
+jump, fly, or cross terrain. They do not mine/place blocks or act as authenticated server accounts.
+Film in loaded chunks. Other clients on the server do not see this cast; the filming client and its
+saved replay do. Use normal `player.*` controls for actual gameplay by the logged-in player.
+
+Enable ReplayMod recording **before joining** the world. You can use:
+
+```json
+{"method":"client.connect","params":{"address":"localhost:25565","recording":true}}
+```
+
+In a live, unpaused world, create characters with different real skins:
+
+```json
+{"method":"actor.spawn","params":{"actorId":"alice","name":"CharacterA","skin":{"username":"Notch"},"x":0,"y":64,"z":0,"yaw":-90}}
+{"method":"actor.spawn","params":{"actorId":"bob","name":"CharacterB","skin":{"username":"jeb_"},"x":4,"y":64,"z":0,"yaw":90}}
+```
+
+Coordinates are feet positions. `actorId` allows 1..48 letters, digits, underscores or hyphens;
+`name` allows 1..16 letters, digits or underscores. The default name is the actor ID.
+Skin options are mutually exclusive:
+
+- Omit `skin` to copy the logged-in player's skin.
+  Built-in default avatars also keep the source player's appearance despite the actor's separate UUID.
+- `{"username":"MinecraftName"}` resolves a real player's current skin.
+- `{"uuid":"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"}` resolves a real player by UUID.
+- `{"value":"<base64 textures property>","signature":"<Mojang signature>"}` uses an existing signed skin property.
+  The signature is verified; texture URLs must point to `textures.minecraft.net`. Classic/slim models and
+  capes use the profile's metadata. This supports repeatable character designs.
+
+Profiles and textures load asynchronously. Poll `actor.state` until `state` is `ready` before starting
+scripts. `loading` means lookup/download is pending; `failed` includes an error.
+Lookup and texture stages each have a 30-second timeout. Explicit lookup failures fail visibly.
+
+```json
+{"method":"actor.state","params":{"actorId":"alice"}}
+{"method":"actor.list","params":{}}
+```
+
+Run a character separately:
+
+```json
+{"method":"actor.sequence","params":{"actorId":"alice","steps":[{"action":"move","x":2,"y":64,"z":0,"ticks":40},{"action":"swing"},{"action":"wait","ticks":20}]}}
+{"method":"actor.sequence","params":{"actorId":"bob","steps":[{"action":"pose","pose":"crouching"},{"action":"wait","ticks":60},{"action":"pose","pose":"standing"}]}}
+```
+
+Or queue all characters in **one synchronized scene**. Every script and referenced item/NBT is validated
+before any character starts; unknown, loading or busy characters reject the whole request:
+
+```json
+{"method":"actor.scene","params":{"scripts":{"alice":[{"action":"move","x":2,"y":64,"z":0,"ticks":40},{"action":"swing"}],"bob":[{"action":"look","yaw":90,"pitch":0,"ticks":20},{"action":"pose","pose":"crouching"},{"action":"wait","ticks":20}]}}}
+```
+
+Both queues start on the next actor tick. At normal client speed, 20 ticks = 1 second. Pausing Minecraft
+freezes the scripts. `result.script` in `actor.state` reports `queued`, `running`, `succeeded`,
+`cancelled` or `failed`. Completed characters retain their final state.
+A script supports 1..128 steps, 1..1200 ticks per step and at most 12000 ticks in total.
+`ticks` defaults to 1; only `move`, `look`, and `wait` accept a duration longer than one tick.
+
+| Action | Parameters | Behavior |
+| --- | --- | --- |
+| `move` | `x`, `y`, `z`, `ticks`, optional `yaw`, `pitch` | Linear path with walking animation; optionally turns while moving |
+| `teleport` | `x`, `y`, `z` | Immediate reposition |
+| `look` | `yaw`, `pitch`, `ticks` | Turns over the shortest yaw arc; pitch -90..90 |
+| `pose` | `pose`, optional `sprinting` | `standing`, `crouching`, `swimming`, `fall_flying`, `sleeping` |
+| `equip` | `slot`, `item`, optional `count`, `nbt` | `mainhand`, `offhand`, `head`, `chest`, `legs`, `feet`; installed item ID and optional SNBT |
+| `swing` | optional `hand` | `mainhand` (default) or `offhand` swing |
+| `hurt` | none | Visual hurt animation |
+| `wait` | `ticks` | Holds the character's state |
+
+Stop one character without stopping the others, or manage the cast:
+
+```json
+{"method":"actor.stop","params":{"actorId":"alice"}}
+{"method":"actor.stopAll","params":{}}
+{"method":"actor.despawn","params":{"actorId":"alice"}}
+{"method":"actor.clear","params":{}}
+```
+
+Stop retains a character's appearance and position. Despawn removes it and frees the actor ID.
+Disconnects, dimension changes, and world replacements clear the old cast and cancel pending lookups.
+Physical keyboard/mouse takeover stops `player.*` automation; it does not cancel film characters.
+
+## Recording and video export
+
+Actors' profile/skin properties, spawn/despawn, positions, rotations, poses, equipment and animations are
+written into the normal `.mcpr` packet stream. They remain visible when the replay is reopened and rendered;
+actor scripts do not run during playback. Skins use Minecraft's normal texture cache/service.
+New recordings also include an actor-frame extension: it preserves authored movement/rotation timing
+and makes teleports snap during playback/export, without vanilla remote-player interpolation delay.
+The normal position packets remain for replay indexing. Exact timing requires playback with this
+AgenticReplay version; older recordings without actor frames retain vanilla interpolation.
+Quick Mode indexes these frames separately from ReplayStudio's packet cache, so forward/backward
+seeks and exports using Quick Mode preserve the same timing. Cut/split prefixes keep only the latest
+frame for each surviving actor and snap to that boundary pose. Unchanged idle motion is not recorded.
+Characters spawned before a recorder becomes available are registered when packet capture begins.
+
+`recording.set` accepts `start`, `pause`, `resume`, `stop`. Pause/stop use ReplayMod cut/split markers;
+packet capture continues until `client.disconnect`, which finalizes the recording asynchronously.
+Poll `replay.list` for the saved file. API sessions finalize without a rename dialog.
+
+The [two-character filming example](examples/film_cast.py) uses only Python's standard library.
+Set `AGENTICREPLAY_TOKEN` to match the launch token, join a recording-enabled world, then run:
+
+```text
+python examples/film_cast.py --skin-a Notch --skin-b jeb_ --x 0 --y 64 --z 0
+```
+
+Add `--video cast-demo.mp4` to disconnect, reopen the new recording, construct a camera path between
+scene markers, and export a 1280x720/30fps shot. Output names must be new; existing files are preserved.
+Use actual loaded filming coordinates for your world. The example owns only `cast_a` and `cast_b`.
+
+Manage recordings with `replay.list/open/close`, `playback.seek/set`, `camera.set/spectate`, `entities.list`,
+`path.keyframe/play/preview/save/load`, and `render.start/status/pause/cancel`.
+Camera times are milliseconds. Player and actor script durations are ticks.
+Call `status` for recording, cast, player, capture, render and path state.

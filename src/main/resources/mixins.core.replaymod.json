@@ -20,7 +20,13 @@
     "MixinMinecraft",
     //"GuiScreenAccessor",
     "KeyBindingAccessor",
+    "ActorPlayerAccessor",
+    "ActorEntityAccessor",
+    "MixinActorDefaultSkin",
+    "MixinActorReplayMovement",
+    "MixinActorReplayPayload",
     "MixinAgentBackgroundWindow",
+    "MixinAgentReplayViewDistance",
     "MinecraftAccessor",
     //#if MC>=11900
     "SimpleOptionAccessor",
