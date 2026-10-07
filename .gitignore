@@ -25,3 +25,9 @@ run-data
 
 repo
 /logs
+
+/integration-*.log
+/*-review.log
+/mc1201-*.log
+__pycache__/
+*.pyc

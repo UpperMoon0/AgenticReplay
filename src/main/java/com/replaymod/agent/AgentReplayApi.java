@@ -31,7 +31,7 @@ import java.util.*;
  * All calls must run on the Minecraft client thread.
  */
 public final class AgentReplayApi {
-    public static final int API_VERSION = 2;
+    public static final int API_VERSION = 3;
     public static final List<String> METHODS = List.of(
         "capabilities", "status", "replay.list", "replay.open", "replay.close", "replay.rename", "replay.delete",
         "playback.set", "playback.seek", "camera.set", "camera.spectate", "entities.list",
@@ -43,9 +43,12 @@ public final class AgentReplayApi {
         "settings.get", "settings.set", "render.start", "render.status", "render.pause", "render.cancel",
         "client.connect", "client.background", "player.state", "player.input", "player.look", "player.select", "player.interact",
         "player.fly", "player.dismount", "player.inventory.click", "player.screen.close",
-        "player.sequence", "player.sequence.status", "player.stop");
+        "player.sequence", "player.sequence.status", "player.stop",
+        "actor.spawn", "actor.list", "actor.state", "actor.sequence", "actor.scene",
+        "actor.stop", "actor.stopAll", "actor.despawn", "actor.clear");
     private final ReplayMod core;
     private final LivePlayerControls player;
+    private final ScriptedActors actors;
     private final Gson gson = new Gson();
     private String captureId;
     private String captureState = "idle";
@@ -65,8 +68,9 @@ public final class AgentReplayApi {
     private RealtimeTimelinePlayer pathPlayer;
     private ListenableFuture<Void> pathFuture;
 
-    public AgentReplayApi(ReplayMod core) { this.core = core; this.player = new LivePlayerControls(core.getMinecraft()); }
+    public AgentReplayApi(ReplayMod core) { this.core = core; this.player = new LivePlayerControls(core.getMinecraft()); this.actors = new ScriptedActors(core.getMinecraft()); }
     void tickPlayer() { player.tick(); }
+    void tickActors() { actors.tick(); }
     void stopPlayer(String reason) { player.stop(reason); }
     boolean holdingAttack() { return player.holdingAttack(); }
 
@@ -82,6 +86,22 @@ public final class AgentReplayApi {
         if (captureState.equals("queued") && !List.of("capabilities", "status", "capture.status", "player.stop").contains(method))
             throw new IllegalStateException("Screenshot capture pending");
         switch (method) {
+            case "actor.spawn": return actors.spawn(p);
+            case "actor.list": return actors.list();
+            case "actor.state": return actors.state(ActorTimeline.text(p, "actorId"));
+            case "actor.sequence": {
+                if (!p.has("steps") || !p.get("steps").isJsonArray()) throw new IllegalArgumentException("steps array required");
+                return actors.sequence(ActorTimeline.text(p, "actorId"), p.getAsJsonArray("steps"));
+            }
+            case "actor.scene": {
+                if (!p.has("scripts") || !p.get("scripts").isJsonObject()) throw new IllegalArgumentException("scripts object required");
+                return actors.scene(p.getAsJsonObject("scripts"));
+            }
+            case "actor.stop": return actors.stop(ActorTimeline.text(p, "actorId"));
+            case "actor.stopAll": actors.stopAll("Stopped by API"); return actors.list();
+            case "actor.despawn": return actors.despawn(ActorTimeline.text(p, "actorId"));
+            case "actor.clear": actors.clear(); return actors.list();
+
             case "client.hud": {
                 var mc = core.getMinecraft();
                 if (mc.world == null || mc.player == null || ReplayModReplay.instance.getReplayHandler() != null)
@@ -161,6 +181,9 @@ public final class AgentReplayApi {
             }
             case "capabilities": return gson.toJsonTree(Map.of("apiVersion", API_VERSION, "methods", METHODS,
                     "recordingSemantics", "pause/stop use cut/split markers; disconnect finalizes capture",
+                    "actorLimit", 32, "actorClock", "20 client ticks/second; paused clients freeze scripts",
+                    "actorSkins", List.of("logged-in player", "username", "uuid", "signed textures property"),
+                    "actorActions", List.of("move", "teleport", "look", "pose", "equip", "swing", "hurt", "wait"),
                     "requiresClient", true));
             case "status": return status();
             case "replay.list": {
@@ -194,6 +217,7 @@ public final class AgentReplayApi {
             }
             case "client.disconnect": {
                 player.stop("Client disconnect");
+                actors.clear();
                 if (ReplayModReplay.instance.getReplayHandler() != null) {
                     stopPath(); replay().endReplay();
                 } else {
@@ -551,7 +575,7 @@ public final class AgentReplayApi {
         if (controls != null) { result.addProperty("recordingStopped", controls.isStopped()); result.addProperty("recordingPaused", controls.isPaused()); }
         result.addProperty("entityTrackerReady", r != null && pathing().getGuiPathing().getEntityTracker() != null);
         result.add("render", renderStatus()); result.add("capture", captureSummary()); result.add("process", processStatus());
-        result.add("player", player.state()); return result;
+        result.add("player", player.state()); result.add("actors", actors.list()); return result;
     }
     private JsonObject captureSummary() {
         JsonObject out = captureStatus(); out.remove("pngBase64"); return out;

@@ -179,6 +179,15 @@ public class PacketListener extends ChannelInboundHandlerAdapter {
         });
     }
 
+    /** Injected film actors do not pass through the network decoder's player-metadata hook. */
+    public void addRecordedPlayer(UUID uuid) {
+        Set<String> uuids = new HashSet<>(Arrays.asList(metaData.getPlayers()));
+        if (uuids.add(uuid.toString())) {
+            metaData.setPlayers(uuids.toArray(new String[0]));
+            saveMetaData();
+        }
+    }
+
     public void save(net.minecraft.network.packet.Packet packet) {
         Packet encoded;
         try {

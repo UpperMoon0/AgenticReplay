@@ -26,5 +26,6 @@ public final class AgentApiServer implements Module {
     public static void physicalInput() {
         if (activeApi != null) activeApi.stopPlayer("Physical input took control");
     }
+    public static void tickActors() { if (activeApi != null) activeApi.tickActors(); }
     public static boolean holdingAttack() { return activeApi != null && activeApi.holdingAttack(); }
 }

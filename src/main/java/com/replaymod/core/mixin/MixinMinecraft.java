@@ -43,6 +43,11 @@ public abstract class MixinMinecraft
         return cursorLocked || com.replaymod.agent.AgentApiServer.holdingAttack();
     }
 
+    @Inject(method = "tick", at = @At("RETURN"))
+    private void agenticActorTick(CallbackInfo ci) {
+        com.replaymod.agent.AgentApiServer.tickActors();
+    }
+
     @Override
     public void replayModProcessKeyBinds() {
         handleInputEvents();

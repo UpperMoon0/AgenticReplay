@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.0
+
+- Combine native capture, hidden-window diagnostics and replay-scoped view distance from PR #3.
+- Add 32 separately scripted film actors with independent identities, real-player skins, scenes and cancellation.
+- Preserve actors and signed/default skins in replay packets; include a two-character Python filming/export example.
+- Target Forge 1.20.1 throughout the implementation, packaging and CI.
+
 ## 0.5.0
 
 - Preserve hidden, unfocused startup through Forge's native window handoff and expose actual GLFW focus/visibility diagnostics.
