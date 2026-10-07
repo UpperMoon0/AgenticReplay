@@ -1,6 +1,9 @@
 name: Build
 
-on: [push]
+on:
+  push:
+    branches: ['main', 'codex/**']
+  pull_request:
 
 jobs:
   build:
@@ -19,11 +22,19 @@ jobs:
           distribution: 'temurin'
 
       - name: Build with Gradle
-        uses: gradle/actions/setup-gradle@v3
-        with:
-          arguments: build
+        uses: gradle/actions/setup-gradle@v4
+      - name: Build and test NeoForge client
+        run: chmod +x gradlew && ./gradlew build --console=plain
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: Package
-          path: build/libs
+          name: AgenticReplay-NeoForge-1.20.4
+          path: |
+            build/libs/agenticreplay-1.20.4-*.jar
+            !build/libs/*-dev*.jar
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Test-results
+          path: build/reports/tests

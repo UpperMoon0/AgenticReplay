@@ -178,6 +178,15 @@ public class PacketListener extends ChannelInboundHandlerAdapter {
         });
     }
 
+    /** Injected film actors do not pass through the network decoder's player-metadata hook. */
+    public void addRecordedPlayer(UUID uuid) {
+        Set<String> uuids = new HashSet<>(Arrays.asList(metaData.getPlayers()));
+        if (uuids.add(uuid.toString())) {
+            metaData.setPlayers(uuids.toArray(new String[0]));
+            saveMetaData();
+        }
+    }
+
     public void save(net.minecraft.network.packet.Packet packet) {
         Packet encoded;
         try {
@@ -336,7 +345,23 @@ public class PacketListener extends ChannelInboundHandlerAdapter {
                 }
             }
 
-            core.runLater(() -> guiSavingReplay.presentRenameDialog(outputPaths));
+            if (System.getProperty("agenticreplay.token", "").isEmpty()) {
+                core.runLater(() -> guiSavingReplay.presentRenameDialog(outputPaths));
+            } else {
+                core.runLater(guiSavingReplay::close);
+                try {
+                    for (Pair<Path, ReplayMetaData> result : outputPaths) {
+                        Path source = result.getLeft();
+                        Path destination = core.folders.getReplayFolder().resolve(source.getFileName());
+                        if (!source.equals(destination)) {
+                            String base = FilenameUtils.getBaseName(source.getFileName().toString());
+                            for (int i = 1; Files.exists(destination); i++)
+                                destination = destination.resolveSibling(base + "." + i + ".mcpr");
+                            Files.move(source, destination);
+                        }
+                    }
+                } catch (IOException failure) { logger.error("Finalizing API recording", failure); }
+            }
         }).start();
     }
 

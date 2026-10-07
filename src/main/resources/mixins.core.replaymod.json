@@ -20,6 +20,8 @@
     "MixinMinecraft",
     "GuiScreenAccessor",
     "KeyBindingAccessor",
+    "ActorPlayerAccessor",
+    "ActorEntityAccessor",
     "MinecraftAccessor",
     //#if MC>=11900
     "SimpleOptionAccessor",

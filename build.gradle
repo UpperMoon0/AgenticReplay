@@ -30,7 +30,7 @@ configurations {
 
 processResources {
     inputs.property "version", project.version
-    archivesBaseName = "reforgedplaymod-${project.minecraft_version}"
+    archivesBaseName = "agenticreplay-${project.minecraft_version}"
     filesMatching("META-INF/mods.toml") {
         expand "version": project.version
     }
@@ -47,7 +47,7 @@ repositories {
             includeGroup "maven.modrinth"
         }
     }
-    maven { url "https://maven.neoforged.net" }
+    maven { url "https://maven.neoforged.net/releases" }
     maven { url "https://jitpack.io" }
 
 }
@@ -76,7 +76,7 @@ dependencies {
     neoForge "net.neoforged:neoforge:${project.neoforge_version}"
 
     bundle("com.github.ReplayMod:ReplayStudio:d9f7c11-slim")
-    minecraftRuntimeLibraries(implementation("com.github.ReplayMod:ReplayStudio:d9f7c11"))
+    minecraftRuntimeLibraries(implementation("com.github.ReplayMod:ReplayStudio:d9f7c11-slim"))
     include(implementation("com.github.viaversion:opennbt:0a02214"))
     include(implementation("com.github.ReplayMod:lwjgl-utils:27dcd66"))
     minecraftRuntimeLibraries("com.github.ReplayMod:lwjgl-utils:27dcd66")

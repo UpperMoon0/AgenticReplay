@@ -25,3 +25,5 @@ run-data
 
 repo
 /logs
+__pycache__/
+*.pyc

@@ -36,6 +36,18 @@ public abstract class MixinMinecraft
     //#if MC>=11400
     @Shadow protected abstract void handleInputEvents();
 
+    @Inject(method = "tick", at = @At("RETURN"))
+    private void agenticActorTick(CallbackInfo ci) {
+        com.replaymod.agent.AgentApiServer.tickActors();
+    }
+
+    @org.spongepowered.asm.mixin.injection.Redirect(method = "handleInputEvents",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/Mouse;isCursorLocked()Z"))
+    private boolean agenticHeldAttack(net.minecraft.client.Mouse mouse) {
+        // Preserve vanilla's entire break-progress/cooldown path without capturing the desktop cursor.
+        return mouse.isCursorLocked() || com.replaymod.agent.AgentApiServer.holdingAttack();
+    }
+
     @Override
     public void replayModProcessKeyBinds() {
         handleInputEvents();

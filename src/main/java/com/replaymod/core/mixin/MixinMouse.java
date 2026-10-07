@@ -12,6 +12,10 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(Mouse.class)
 public class MixinMouse {
+    @Inject(method = "onMouseButton", at = @At("HEAD"))
+    private void agenticTakeover(long window, int button, int action, int mods, CallbackInfo ci) {
+        if (action == org.lwjgl.glfw.GLFW.GLFW_PRESS) com.replaymod.agent.AgentApiServer.physicalInput();
+    }
     @Inject(method = "onMouseButton", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/option/KeyBinding;onKeyPressed(Lnet/minecraft/client/util/InputUtil$Key;)V", shift = At.Shift.AFTER))
     private void afterKeyBindingTick(CallbackInfo ci) {
         KeyBindingEventCallback.EVENT.invoker().onKeybindingEvent();

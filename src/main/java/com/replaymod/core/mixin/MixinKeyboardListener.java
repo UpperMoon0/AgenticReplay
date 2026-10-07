@@ -10,6 +10,10 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(Keyboard.class)
 public class MixinKeyboardListener {
+    @Inject(method = "onKey", at = @At("HEAD"))
+    private void agenticTakeover(long window, int key, int scanCode, int action, int modifiers, CallbackInfo ci) {
+        if (action == org.lwjgl.glfw.GLFW.GLFW_PRESS) com.replaymod.agent.AgentApiServer.physicalInput();
+    }
     private static final String ON_KEY_PRESSED = "Lnet/minecraft/client/option/KeyBinding;onKeyPressed(Lnet/minecraft/client/util/InputUtil$Key;)V";
 
     @Inject(method = "onKey", at = @At(value = "INVOKE", target = ON_KEY_PRESSED), cancellable = true)

@@ -246,6 +246,13 @@ public class GuiMarkerTimeline extends AbstractGuiTimeline<GuiMarkerTimeline> im
         return false;
     }
 
+    /** Shared marker replacement used by automation and the interactive overlay. */
+    public void replaceMarkers(Set<Marker> replacement) {
+        markers = new HashSet<>(replacement);
+        selectedMarker = null;
+        saveMarkers.accept(markers);
+    }
+
     public void addMarker(Marker marker) {
         markers.add(marker);
         saveMarkers.accept(markers);
