@@ -2,6 +2,8 @@
 
 ## 0.5.0
 
+- Preserve hidden, unfocused startup through Forge's native window handoff and expose actual GLFW focus/visibility diagnostics.
+
 - Allow screen recovery while paused, retaining pause checks for every other action and sequence transition.
 - Add API v2 live actor state, bounded native movement/looking/use/attack, hotbar selection, permitted flight, and dismounting.
 - Add repeatable client-tick sequences with conditional waits, assertions, progress, cancellation, input cleanup, and tick/wall-time limits.

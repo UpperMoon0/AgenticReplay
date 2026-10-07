@@ -173,6 +173,13 @@ final class LivePlayerControls implements PlayerActionRunner.Port {
         boolean live = mc.player != null && mc.world != null && ReplayModReplay.instance.getReplayHandler() == null;
         out.addProperty("live", live); out.addProperty("screen", screenName()); out.add("action", job());
         out.addProperty("paused", mc.isPaused()); out.addProperty("windowFocused", mc.isWindowFocused());
+        // Minecraft's focus field starts true before its first event poll.
+        // Report GLFW's actual attributes separately for startup diagnostics.
+        if (mc.getWindow() != null && mc.getWindow().getHandle() != 0) {
+            long window = mc.getWindow().getHandle();
+            out.addProperty("glfwFocused", org.lwjgl.glfw.GLFW.glfwGetWindowAttrib(window, org.lwjgl.glfw.GLFW.GLFW_FOCUSED) != 0);
+            out.addProperty("windowVisible", org.lwjgl.glfw.GLFW.glfwGetWindowAttrib(window, org.lwjgl.glfw.GLFW.GLFW_VISIBLE) != 0);
+        }
         out.addProperty("loading", mc.getOverlay() != null);
         out.addProperty("background", !mc.options.pauseOnLostFocus);
         out.addProperty("cursorLocked", mc.mouse.isCursorLocked());
