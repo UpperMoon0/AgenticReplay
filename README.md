@@ -30,6 +30,7 @@ A timeout has an uncertain outcome if execution already began: inspect state bef
 | State | capabilities, status |
 | Live client | client.connect/disconnect/background, player.state/stop |
 | Live actor | player.input/look/select/interact/fly/dismount, player.inventory.click, player.screen.close |
+| Offline replay view | camera.options accepts viewDistance 2..32, overriding the recorded server clamp for cinematic framing |
 | Actor sequences | player.sequence, player.sequence.status |
 | Files | replay.list/open/close/rename/delete/process, process.status |
 | Playback | playback.set (speed 0 pauses), playback.seek |
@@ -65,7 +66,13 @@ Compatibility mismatches return an error; explicitly pass `allowModMismatch:true
 Position keyframes also accept `entityId` for spectator paths; wait for `entityTrackerReady` in status.
 `path.import` accepts a `timeline` object using the ReplayStudio serialization returned by path.export, optionally a saved path `name`.
 `path.repository` lists saved path names; `path.preview` applies the path at a supplied time without playback.
-`camera.options` controls `suppressMovement`, `hideHud`, and `overlay`.
+`camera.options` controls `suppressMovement`, `hideHud`, and `overlay`. Its `viewDistance` override applies only to the current replay, survives seeks, and restores the previous client distance when the replay closes through the GUI, `replay.close`, or `client.disconnect`. A new replay starts with its recorded server clamp.
+
+For live player evidence, `client.hud` accepts `debug` and `hideHud` booleans.
+`capture.live` returns the current game framebuffer as PNG base64 with its
+dimensions and fresh player state. It retains the actual HUD/F3 display, requires
+live gameplay with no screen or replay open, and is bounded to 1920x1080 pixels
+and 6 MiB. It neither renders a replacement camera nor reads the desktop.
 
 `capture.start` accepts width/height and optional `thumbnail:true`; poll capture.status with captureId for a PNG base64 preview.
 Capture is queued and cannot overlap mutations. `replay.process` applies cut/split markers to a closed replay and returns processId;
@@ -95,7 +102,10 @@ For unattended filming while using other applications, add `-Dagenticreplay.back
 launching. This opts out of initial GLFW window focus and disables Minecraft's automatic pause menu on
 focus loss for this client session. The native window stays hidden and its framebuffer remains available
 for recording and export. Forge's separate early loading window must also be disabled with
-`earlyWindowControl=false` in the filming profile's `config/fml.toml`.
+  `earlyWindowControl=false` in the filming profile's `config/fml.toml`.
+Keep each `-D` flag separated by whitespace. Native state reports GLFW's actual
+`glfwFocused` and `windowVisible` attributes; Minecraft's `windowFocused` field
+can initially be true before its first focus event even for a hidden window.
 `client.background` with `{"enabled":true,"hidden":true}` can hide an already running game window and disable auto-pause
 for an already running client, or `enabled:false` can restore it. It does not focus the window or send
 desktop input. Close an existing menu with `player.screen.close`, then start a take. Screen closing is
