@@ -103,7 +103,7 @@ public final class AgentReplayApi {
                 try (var shot = new de.johni0702.minecraft.gui.versions.Image(
                         net.minecraft.client.util.ScreenshotRecorder.takeScreenshot(mc.getFramebuffer()))) {
                     ByteArrayOutputStream output = new ByteArrayOutputStream();
-                    ImageIO.write(shot.toBufferedImage(), "PNG", output);
+                    shot.writePNG(output);
                     if (output.size() > 6 * 1024 * 1024) throw new IllegalStateException("Capture exceeds transfer limit");
                     JsonObject out = new JsonObject();
                     out.addProperty("width", shot.getWidth()); out.addProperty("height", shot.getHeight());
