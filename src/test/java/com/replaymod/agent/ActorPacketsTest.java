@@ -59,6 +59,13 @@ public class ActorPacketsTest {
         var entry = roundTrip(ActorPackets.addProfile(profile)).getPlayerAdditionEntries().get(0);
         assertTrue(entry.profile().getProperties().isEmpty()); assertEquals(profile.getId(), entry.profile().getId());
     }
+    @Test public void copiedDefaultAvatarSourceSurvivesReplayPacketRoundTrip() {
+        GameProfile source = new GameProfile(UUID.randomUUID(), "Source");
+        GameProfile actor = ActorDefaultSkin.character(UUID.randomUUID(), "Actor", source);
+        GameProfile decoded = roundTrip(ActorPackets.addProfile(actor)).getPlayerAdditionEntries().get(0).profile();
+        assertEquals(ActorDefaultSkin.textures(actor), ActorDefaultSkin.textures(decoded));
+        assertEquals(actor.getId(), decoded.getId()); assertNotEquals(source.getId(), decoded.getId());
+    }
     @Test public void negativeActorEntityIdsAndProfileRemovalSurviveSerialization() {
         PacketByteBuf buf = new PacketByteBuf(Unpooled.buffer());
         try {

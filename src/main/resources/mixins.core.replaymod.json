@@ -22,6 +22,7 @@
     "KeyBindingAccessor",
     "ActorPlayerAccessor",
     "ActorEntityAccessor",
+    "MixinActorDefaultSkin",
     "MinecraftAccessor",
     //#if MC>=11900
     "SimpleOptionAccessor",

@@ -7,5 +7,6 @@
 - Add movement, teleport, look, pose, equipment, swing, hurt and wait actions, plus atomic synchronized scenes.
 - Record actors as ordinary player packets so their skins and behavior survive replay and video export.
 - Add actor status/cancellation/despawn, asynchronous bounded skin loading, and world-transition cleanup.
+- Preserve a copied player's built-in default avatar independently of actor UUIDs, including after replay reopen.
 - Include a runnable two-character recording/export example and actor regression coverage.
 - Enable pull-request CI, update the NeoForge Maven URL, and consistently use the bundled ReplayStudio slim dependency.

@@ -78,7 +78,7 @@ final class ScriptedActors {
     void clear() { for (String id : List.copyOf(actors.keySet())) despawn(id); }
     void tick() {
         for (Actor actor : List.copyOf(actors.values())) {
-            if (mc.world != actor.world || mc.player == null || ReplayModReplay.instance.getReplayHandler() != null) {
+            if (mc.world != actor.world || mc.getNetworkHandler() != actor.connection || mc.player == null || ReplayModReplay.instance.getReplayHandler() != null) {
                 despawn(actor.id); continue;
             }
             if (mc.isPaused()) continue; // Script time and the recorded world share the same pause boundary.
@@ -135,8 +135,8 @@ final class ScriptedActors {
             }
             // A world transition must clean the old cast without touching profiles in the new world.
             actor.world.removeEntity(actor.entity.getId(), Entity.RemovalReason.DISCARDED);
-            if (mc.world == actor.world && mc.getNetworkHandler() != null)
-                mc.getNetworkHandler().onPlayerRemove(new PlayerRemoveS2CPacket(List.of(actor.uuid)));
+            if (mc.getNetworkHandler() == actor.connection)
+                actor.connection.onPlayerRemove(new PlayerRemoveS2CPacket(List.of(actor.uuid)));
             actor.entity = null;
         }
         if (actor.profile != null) actor.profile.cancel(false);
@@ -146,7 +146,8 @@ final class ScriptedActors {
     }
     private Actor ready(String id) {
         requireLive(); Actor actor = actor(id);
-        if (actor.world != mc.world || !actor.state.equals("ready")) throw new IllegalStateException("Actor is not ready: " + id);
+        if (actor.world != mc.world || actor.connection != mc.getNetworkHandler() || !actor.state.equals("ready"))
+            throw new IllegalStateException("Actor is not ready: " + id);
         return actor;
     }
     private void requireLive() {
@@ -162,6 +163,7 @@ final class ScriptedActors {
         final String id, name;
         final UUID uuid = UUID.randomUUID();
         final ClientWorld world;
+        final net.minecraft.client.network.ClientPlayNetworkHandler connection;
         final ActorTimeline timeline = new ActorTimeline(this);
         final double x, y, z;
         final float yaw, pitch;
@@ -176,6 +178,7 @@ final class ScriptedActors {
         float startYaw, startPitch;
         Actor(String id, String name, ClientWorld world, double x, double y, double z, float yaw, float pitch) {
             this.id = id; this.name = name; this.world = world; this.x = x; this.y = y; this.z = z; this.yaw = yaw; this.pitch = pitch;
+            this.connection = mc.getNetworkHandler();
         }
         void validate(List<ActorTimeline.Step> plan) {
             for (var step : plan) if (step.action().equals("equip")) item(step.params());

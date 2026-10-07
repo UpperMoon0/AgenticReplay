@@ -56,6 +56,7 @@ Coordinates are feet positions. `actorId` allows 1..48 letters, digits, undersco
 Skin options are mutually exclusive:
 
 - Omit `skin` to copy the logged-in player's skin.
+  Built-in default avatars also keep the source player's appearance despite the actor's separate UUID.
 - `{"username":"MinecraftName"}` resolves a real player's current skin.
 - `{"uuid":"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"}` resolves a real player by UUID.
 - `{"value":"<base64 textures property>","signature":"<Mojang signature>"}` uses an existing signed skin property.

@@ -53,9 +53,7 @@ final class ActorSkins {
                 var result = mc.getSessionService().fetchProfile(source.getId(), true);
                 if (result != null) source = result.profile();
             }
-            GameProfile actor = new GameProfile(actorUuid, name);
-            actor.getProperties().putAll(source.getProperties());
-            return actor;
+            return ActorDefaultSkin.character(actorUuid, name, source);
         }, LOOKUPS).orTimeout(30, TimeUnit.SECONDS);
     }
 }
