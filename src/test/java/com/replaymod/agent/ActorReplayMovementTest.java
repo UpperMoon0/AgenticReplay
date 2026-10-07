@@ -61,6 +61,17 @@ public class ActorReplayMovementTest {
         state.accept(actor, frame(actor, 101, false)); actor.vanillaTick(); state.afterTick(actor);
         assertEquals(100, actor.previous.x(), 0); assertEquals(101, actor.pose.x(), 0);
     }
+    @Test public void quickSeekUsesAuthoredPreviousPoseInsteadOfTheCurrentWorldPose() {
+        Player actor = new Player(-1000000000);
+        actor.pose = pose(500);
+        ActorReplayMovement.State state = new ActorReplayMovement.State();
+        assertTrue(state.accept(actor, frame(actor, 4, false), pose(2)));
+        actor.vanillaTick(); state.afterTick(actor);
+        assertEquals(4, actor.pose.x(), 0); assertEquals(2, actor.previous.x(), 0);
+        state.accept(actor, frame(actor, 100, true), pose(2));
+        actor.vanillaTick(); state.afterTick(actor);
+        assertEquals(100, actor.previous.x(), 0);
+    }
     @Test public void multipleFramesBeforeOneTickUseTheLastAuthoredInterval() {
         Player actor = new Player(-1000000000);
         ActorReplayMovement.State state = new ActorReplayMovement.State();

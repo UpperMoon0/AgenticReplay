@@ -276,6 +276,9 @@ New recordings also include an actor-frame extension: it preserves authored move
 and makes teleports snap during playback/export, without vanilla remote-player interpolation delay.
 The normal position packets remain for replay indexing. Exact timing requires playback with this
 AgenticReplay version; older recordings without actor frames retain vanilla interpolation.
+Quick Mode indexes these frames separately from ReplayStudio's packet cache, so forward/backward
+seeks and exports using Quick Mode preserve the same timing. Cut/split prefixes keep only the latest
+frame for each surviving actor and snap to that boundary pose. Unchanged idle motion is not recorded.
 Characters spawned before a recorder becomes available are registered when packet capture begins.
 
 `recording.set` accepts `start`, `pause`, `resume`, `stop`. Pause/stop use ReplayMod cut/split markers;

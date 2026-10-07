@@ -20,6 +20,9 @@ public abstract class MixinActorReplayMovement implements ActorReplayMovement.Ta
         return new ActorReplayMovement.Pose(player.getX(), player.getY(), player.getZ(), player.getYaw(), player.getPitch(), player.headYaw, player.bodyYaw);
     }
     @Override public boolean actorReplayAccept(ActorReplayMovement.Frame frame) { return actorReplayState.accept(this, frame); }
+    @Override public boolean actorReplayAccept(ActorReplayMovement.Frame frame, ActorReplayMovement.Pose previous) {
+        return actorReplayState.accept(this, frame, previous);
+    }
     @Override public void actorApply(ActorReplayMovement.Frame frame) {
         var player = (OtherClientPlayerEntity) (Object) this;
         var p = frame.pose();

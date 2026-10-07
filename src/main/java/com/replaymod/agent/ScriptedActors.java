@@ -183,6 +183,7 @@ final class ScriptedActors {
         EntityPose pose = EntityPose.STANDING;
         boolean sprinting;
         boolean teleportSnapshot;
+        ActorReplayMovement.Frame recordedFrame;
         double startX, startY, startZ;
         float startYaw, startPitch;
         Actor(String id, String name, ClientWorld world, double x, double y, double z, float yaw, float pitch) {
@@ -239,6 +240,7 @@ final class ScriptedActors {
         }
         void record(Packet<?> packet) { if (recorder != null) recorder.save(packet); }
         void recordSpawn() {
+            recordedFrame = null;
             record(ActorPackets.addProfile(entity.getGameProfile()));
             record(new PlayerSpawnS2CPacket(entity));
             recorder.addRecordedPlayer(uuid);
@@ -248,16 +250,23 @@ final class ScriptedActors {
         }
         void recordSnapshot() {
             if (recorder == null) { teleportSnapshot = false; return; }
-            record(new EntityPositionS2CPacket(entity));
-            record(new EntitySetHeadYawS2CPacket(entity, (byte) (entity.headYaw * 256 / 360)));
-            record(new EntityVelocityUpdateS2CPacket(entity.getId(), entity.getVelocity()));
+            var velocity = entity.getVelocity();
+            var frame = new ActorReplayMovement.Frame(entity.getId(), uuid,
+                    new ActorReplayMovement.Pose(entity.getX(), entity.getY(), entity.getZ(), entity.getYaw(), entity.getPitch(), entity.headYaw, entity.bodyYaw),
+                    velocity.x, velocity.y, velocity.z, teleportSnapshot);
+            boolean changed = ActorReplayMovement.changed(recordedFrame, frame);
+            if (changed) {
+                record(new EntityPositionS2CPacket(entity));
+                record(new EntitySetHeadYawS2CPacket(entity, (byte) (entity.headYaw * 256 / 360)));
+                record(new EntityVelocityUpdateS2CPacket(entity.getId(), entity.getVelocity()));
+            }
             var tracked = entity.getDataTracker().getDirtyEntries();
             if (tracked != null) record(new EntityTrackerUpdateS2CPacket(entity.getId(), tracked));
             recordEquipment();
-            var velocity = entity.getVelocity();
-            ActorReplayMovement.record(new ActorReplayMovement.Frame(entity.getId(), uuid,
-                    new ActorReplayMovement.Pose(entity.getX(), entity.getY(), entity.getZ(), entity.getYaw(), entity.getPitch(), entity.headYaw, entity.bodyYaw),
-                    velocity.x, velocity.y, velocity.z, teleportSnapshot), this::record);
+            if (changed) {
+                ActorReplayMovement.record(frame, this::record);
+                recordedFrame = frame;
+            }
             teleportSnapshot = false;
         }
         void recordEquipment() {

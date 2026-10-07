@@ -23,7 +23,15 @@ public final class ActorReplayMovement {
         void actorPrevious(Pose pose);
         void actorLimbs(float speed);
     }
-    public interface Target extends Port { boolean actorReplayAccept(Frame frame); }
+    public interface Target extends Port {
+        boolean actorReplayAccept(Frame frame);
+        boolean actorReplayAccept(Frame frame, Pose previous);
+    }
+    public static boolean changed(Frame previous, Frame current) {
+        return previous == null || current.teleport() || previous.entityId() != current.entityId()
+                || !previous.uuid().equals(current.uuid()) || !previous.pose().equals(current.pose())
+                || previous.vx() != current.vx() || previous.vy() != current.vy() || previous.vz() != current.vz();
+    }
 
     public static void record(Frame frame, Consumer<Packet<?>> sink) {
         PacketByteBuf data = new PacketByteBuf(Unpooled.buffer());
@@ -57,8 +65,11 @@ public final class ActorReplayMovement {
         private Frame pending;
         private Pose previous;
         public boolean accept(Port port, Frame frame) {
+            return accept(port, frame, frame.teleport() ? frame.pose() : port.actorPose());
+        }
+        public boolean accept(Port port, Frame frame, Pose authoredPrevious) {
             if (port.actorEntityId() != frame.entityId() || !port.actorUuid().equals(frame.uuid())) return false;
-            previous = frame.teleport() ? frame.pose() : port.actorPose();
+            previous = frame.teleport() ? frame.pose() : authoredPrevious;
             pending = frame;
             port.actorApply(frame);
             port.actorPrevious(previous);
