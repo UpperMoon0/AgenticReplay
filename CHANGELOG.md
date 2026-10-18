@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.7.0 (Forge 1.7.10 target)
+
+- Add an isolated Java 8 agent adapter for the historical official ReplayMod 1.7.10-2.5.2 engine, with authenticated loopback recording/replay/camera and basic live-client controls.
+- Preserve the modern 1.20.1 artifact and its version; publish the legacy target separately with explicit capability limitations and dependency provenance.
+
 ## 0.6.0
 
 - Preserve actor movement/turning timing and instantaneous teleports in playback with exact actor frames alongside indexed vanilla packets.

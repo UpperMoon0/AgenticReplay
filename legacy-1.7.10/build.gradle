@@ -1,0 +1,30 @@
+plugins {
+    id 'java-library'
+    id 'com.gtnewhorizons.retrofuturagradle' version '1.4.9'
+}
+group = 'com.agenticreplay'
+version = '0.7.0'
+base { archivesName = 'agenticreplay-1.7.10' }
+java {
+    toolchain { languageVersion = JavaLanguageVersion.of(8) }
+    withSourcesJar()
+}
+minecraft {
+    mcVersion = '1.7.10'
+    mcpMappingChannel = 'stable'
+    mcpMappingVersion = '12'
+}
+repositories { mavenCentral() }
+dependencies { testImplementation 'junit:junit:4.13.2' }
+processResources {
+    inputs.property 'version', project.version
+    filesMatching('mcmod.info') { expand(version: project.version) }
+}
+
+// The official engine stays a separate runtime dependency, never shaded into our jar.
+def replayMod = file('libs/replaymod-1.7.10-2.5.2.jar')
+if (!replayMod.isFile()) throw new GradleException('Run python3 legacy-1.7.10/scripts/prepare_replaymod.py first')
+def replayHash = java.security.MessageDigest.getInstance('SHA-256').digest(replayMod.bytes).encodeHex().toString()
+if (replayHash != 'e8b0379ed3b03b3028145c71962aa141757844f2eb7b82ce5390a9cee5a8ce96')
+    throw new GradleException('ReplayMod dependency checksum mismatch')
+dependencies { implementation rfg.deobf(files(replayMod)) }

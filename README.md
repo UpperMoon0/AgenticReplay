@@ -1,5 +1,7 @@
 # AgenticReplay
 
+A separate [Forge 1.7.10 client adapter](legacy-1.7.10/README.md) targets the historical ReplayMod 2.5.2 engine. It has its own build, runtime dependency and capability list; the modern target below is unchanged.
+
 Forge 1.20.1 fork of [ReForgedPlay](https://github.com/ferriarnus/ReForgedPlay), based on [ReplayMod](https://github.com/ReplayMod/ReplayMod).
 Agent control uses a versioned Java facade and an opt-in authenticated loopback HTTP endpoint. Existing UI remains usable.
 
