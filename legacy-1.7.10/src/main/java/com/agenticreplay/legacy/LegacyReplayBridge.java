@@ -107,7 +107,7 @@ public final class LegacyReplayBridge {
                 handler.doJump(time, retain);
                 JsonObject result = status();
                 result.addProperty("requestedTime", time);
-                result.addProperty("seekMayStillBeRunning", handler.getReplaySender().currentTimeStamp() != time);
+                result.addProperty("seekMayStillBeRunning", ((FullReplaySender) handler.getReplaySender()).isHurrying());
                 return result;
             }
             case "camera.set": return setCamera(p);
