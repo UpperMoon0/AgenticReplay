@@ -1,6 +1,7 @@
 package com.agenticreplay.legacy;
 
 import com.google.gson.*;
+import com.replaymod.agent.ApiJson;
 import com.replaymod.replay.ReplayModReplay;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiMainMenu;
@@ -87,21 +88,7 @@ public final class LegacyClientControls {
         if (mc.thePlayer == null || mc.theWorld == null || ReplayModReplay.instance.getReplayHandler() != null)
             throw new IllegalStateException("A live player world is required");
     }
-    private static boolean bool(JsonObject p, String key) {
-        if (!p.has(key) || !p.get(key).isJsonPrimitive() || !p.get(key).getAsJsonPrimitive().isBoolean())
-            throw new IllegalArgumentException(key + " must be a boolean");
-        return p.get(key).getAsBoolean();
-    }
-    private static String string(JsonObject p, String key) {
-        if (!p.has(key) || !p.get(key).isJsonPrimitive() || !p.get(key).getAsJsonPrimitive().isString())
-            throw new IllegalArgumentException(key + " must be a string");
-        return p.get(key).getAsString();
-    }
-    private static double number(JsonObject p, String key) {
-        if (!p.has(key) || !p.get(key).isJsonPrimitive() || !p.get(key).getAsJsonPrimitive().isNumber())
-            throw new IllegalArgumentException(key + " must be a number");
-        double value = p.get(key).getAsDouble();
-        if (Double.isNaN(value) || Double.isInfinite(value)) throw new IllegalArgumentException(key + " must be finite");
-        return value;
-    }
+    private static boolean bool(JsonObject p, String key) { return ApiJson.bool(p, key); }
+    private static String string(JsonObject p, String key) { return ApiJson.string(p, key); }
+    private static double number(JsonObject p, String key) { return ApiJson.number(p, key); }
 }

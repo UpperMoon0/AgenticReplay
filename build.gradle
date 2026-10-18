@@ -129,3 +129,11 @@ dependencies {
     compileOnly(annotationProcessor("io.github.llamalad7:mixinextras-common:0.3.6"))
     implementation(include("io.github.llamalad7:mixinextras-forge:0.3.6"))
 }
+// Pure Java 8 API contracts are compiled from the same files on both targets.
+sourceSets {
+    main.java.srcDir 'common/src/main/java'
+    test.java.srcDir 'common/src/test/java'
+}
+tasks.withType(Jar).configureEach {
+    from('common/LICENSE.txt') { into 'META-INF'; rename { 'LICENSE-agenticreplay-common.txt' } }
+}

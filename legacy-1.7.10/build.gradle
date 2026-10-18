@@ -3,7 +3,9 @@ plugins {
     id 'com.gtnewhorizons.retrofuturagradle' version '1.4.9'
 }
 group = 'com.agenticreplay'
-version = '0.7.0'
+def sharedVersions = new Properties()
+file('../gradle.properties').withInputStream { sharedVersions.load(it) }
+version = sharedVersions.getProperty('mod_version')
 base { archivesName = 'agenticreplay-1.7.10' }
 java {
     toolchain { languageVersion = JavaLanguageVersion.of(8) }
@@ -11,6 +13,7 @@ java {
 }
 minecraft {
     mcVersion = '1.7.10'
+    injectedTags.put('VERSION', project.version)
     mcpMappingChannel = 'stable'
     mcpMappingVersion = '12'
 }
@@ -51,3 +54,13 @@ dependencies { implementation rfg.deobf(files(compileReplayMod)) }
 tasks.withType(Jar).configureEach {
     from('LICENSE.md') { into 'META-INF'; rename { 'LICENSE-agenticreplay.txt' } }
 }
+
+sourceSets {
+    main.java.srcDir '../common/src/main/java'
+    test.java.srcDir '../common/src/test/java'
+}
+tasks.withType(Jar).configureEach {
+    from('../common/LICENSE.txt') { into 'META-INF'; rename { 'LICENSE-agenticreplay-common.txt' } }
+}
+
+tasks.injectTags.configure { outputClassName = 'com.agenticreplay.legacy.BuildInfo' }

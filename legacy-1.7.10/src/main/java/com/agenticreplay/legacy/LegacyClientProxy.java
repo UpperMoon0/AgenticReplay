@@ -1,6 +1,7 @@
 package com.agenticreplay.legacy;
 
 import com.google.gson.*;
+import com.replaymod.agent.ApiHttpTransport;
 
 /** Opt-in RPC lifecycle. A render-driven queue also runs while paused, without engine queue locks. */
 public final class LegacyClientProxy extends LegacyServerProxy {
@@ -12,7 +13,7 @@ public final class LegacyClientProxy extends LegacyServerProxy {
         final LegacyClientQueue queue = new LegacyClientQueue();
         new LegacyLifecycle(replay, queue).register();
         try {
-            final LegacyHttpTransport transport = new LegacyHttpTransport(Integer.getInteger("agenticreplay.port", 8766), token,
+            final ApiHttpTransport transport = new ApiHttpTransport(Integer.getInteger("agenticreplay.port", 8766), token,
                     queue::enqueue, (method, params) -> {
                 if ("capabilities".equals(method)) {
                     JsonObject result = new JsonObject();

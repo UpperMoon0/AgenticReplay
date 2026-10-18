@@ -1,4 +1,4 @@
-package com.agenticreplay.legacy;
+package com.replaymod.agent;
 
 import com.google.gson.*;
 import com.sun.net.httpserver.HttpServer;
@@ -10,21 +10,21 @@ import java.util.concurrent.*;
 import java.util.function.Consumer;
 
 /** Java 8/Gson 2.2.4 compatible, authenticated loopback-only RPC. */
-public final class LegacyHttpTransport implements AutoCloseable {
+public final class ApiHttpTransport implements AutoCloseable {
     public interface Dispatcher { JsonElement call(String method, JsonObject params) throws Exception; }
     private final HttpServer server;
     private final ExecutorService workers;
 
-    public LegacyHttpTransport(int port, final String token, final Consumer<Runnable> enqueue,
+    public ApiHttpTransport(int port, final String token, final Consumer<Runnable> enqueue,
                                final Dispatcher dispatcher) throws IOException {
         this(port, token, enqueue, dispatcher, 30000);
     }
-    LegacyHttpTransport(int port, final String token, final Consumer<Runnable> enqueue,
+    ApiHttpTransport(int port, final String token, final Consumer<Runnable> enqueue,
                         final Dispatcher dispatcher, final long timeoutMillis) throws IOException {
         if (token == null || token.length() < 32) throw new IllegalArgumentException("API token needs at least 32 characters");
         server = HttpServer.create(new InetSocketAddress("127.0.0.1", port), 8);
         workers = new ThreadPoolExecutor(2, 2, 0, TimeUnit.SECONDS, new ArrayBlockingQueue<Runnable>(8), r -> {
-            Thread t = new Thread(r, "AgenticReplay legacy HTTP"); t.setDaemon(true); return t;
+            Thread t = new Thread(r, "AgenticReplay HTTP"); t.setDaemon(true); return t;
         }, new ThreadPoolExecutor.AbortPolicy());
         server.setExecutor(workers);
         server.createContext("/rpc", exchange -> {

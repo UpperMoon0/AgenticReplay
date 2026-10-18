@@ -1,6 +1,7 @@
 package com.agenticreplay.legacy;
 
 import com.google.gson.JsonArray;
+import com.replaymod.agent.ApiJson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.replaymod.core.ReplayMod;
@@ -503,32 +504,10 @@ public final class LegacyReplayBridge {
             throw new UnsupportedOperationException("Incompatible ReplayMod runtime: " + owner.getName() + "." + name, failure);
         }
     }
-    private static String text(JsonObject p, String key) {
-        JsonElement value = p.get(key);
-        if (value == null || !value.isJsonPrimitive() || !value.getAsJsonPrimitive().isString() || value.getAsString().isEmpty()) {
-            throw new IllegalArgumentException(key + " must be a nonempty string");
-        }
-        return value.getAsString();
-    }
-    private static boolean bool(JsonObject p, String key, boolean fallback) {
-        JsonElement value = p.get(key);
-        if (value == null) return fallback;
-        if (!value.isJsonPrimitive() || !value.getAsJsonPrimitive().isBoolean()) throw new IllegalArgumentException(key + " must be boolean");
-        return value.getAsBoolean();
-    }
-    private static double number(JsonObject p, String key, double fallback) {
-        JsonElement value = p.get(key);
-        if (value == null) return fallback;
-        if (!value.isJsonPrimitive() || !value.getAsJsonPrimitive().isNumber()) throw new IllegalArgumentException(key + " must be a number");
-        double number = value.getAsDouble();
-        if (Double.isNaN(number) || Double.isInfinite(number)) throw new IllegalArgumentException(key + " must be finite");
-        return number;
-    }
-    private static int integer(JsonObject p, String key, int fallback) {
-        double value = number(p, key, fallback);
-        if (value != Math.rint(value) || value < Integer.MIN_VALUE || value > Integer.MAX_VALUE) throw new IllegalArgumentException(key + " must be an integer");
-        return (int) value;
-    }
+    private static String text(JsonObject p, String key) { return ApiJson.text(p, key); }
+    private static boolean bool(JsonObject p, String key, boolean fallback) { return ApiJson.bool(p, key, fallback); }
+    private static double number(JsonObject p, String key, double fallback) { return ApiJson.number(p, key, fallback); }
+    private static int integer(JsonObject p, String key, int fallback) { return ApiJson.integer(p, key, fallback, Integer.MIN_VALUE, Integer.MAX_VALUE); }
     private static float angle(JsonObject p, String key, float fallback) {
         double value = number(p, key, fallback);
         if (Math.abs(value) > 360000) throw new IllegalArgumentException(key + " is outside the supported angle range");
