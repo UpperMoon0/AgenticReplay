@@ -45,6 +45,10 @@ Start recording before connection; missing login/chunk packets cannot be recover
 
 Replay filenames are constrained to the replay directory; links/traversal are rejected. `replay.delete` moves a closed file into `agenticreplay-trash` for recovery. Replay opening checks mod compatibility unless explicitly allowed. Spectating is restricted to living entities because that is the 1.7.10 engine contract. Rendering and modded replay compatibility need an in-game smoke test; unit/build tests alone cannot establish them.
 
+## GTNH and Angelica
+
+Keep the modpack’s Angelica installation; do not add OptiFine alongside it. `capabilities.renderCompatibility` and `status.renderCompatibility` report the loaded Angelica version and explicitly leave shader export unverified. Source inspection of GTNH’s listed Angelica 2.2.28 found unsynchronized shader animation time, an ineffective ReplayMod terrain-completion barrier, and a separate hand-render event. These are potential footage defects, not evidence that a tested recording/replay round trip failed. Other versions require their own validation. See [the shader workflow and pinned evidence](../docs/SHADER_WORKFLOW.md) before using this stack for footage. No speculative renderer patches are installed.
+
 ## Provenance and licensing
 
 The private user-provided `UpperMoon0/MC-Modding-Src` 1.7.10 tree was inspected for exact vanilla contracts. Its audit identifies community MCP stable-12 names, not Mojang mappings. No decompiled vanilla source, Mojang jar, mappings archive, or private repository content is redistributed here.
@@ -56,7 +60,7 @@ The bridge uses typed engine APIs except narrowly pinned private UI fields for r
 ## Verification record
 
 - Local Java 8 compilation, reobfuscation and full legacy build passed.
-- Twenty-six JUnit tests passed in the legacy build (including the sixteen shared-contract tests). Transport, render-queue, replay-path and pinned engine ABI tests cover authentication, bounds, timeout cancellation, queue isolation, filename safety and four private engine fields.
+- Twenty-nine JUnit tests passed in the legacy build (including the sixteen shared-contract tests). Transport, render-queue, replay-path and pinned engine ABI tests cover authentication, bounds, timeout cancellation, queue isolation, filename safety four private engine fields, and truthful renderer compatibility reporting.
 - Independent binary linkage review resolved referenced Minecraft/Forge/ReplayMod members against the exact 1.7.10 runtime inputs; adapter bytecode targets Java 8.
 - No graphical Minecraft session has been launched in this environment. No recording/replay round trip, modded-server handshake or rendered export is claimed verified yet.
 
