@@ -1,19 +1,19 @@
 package com.agenticreplay.legacy;
 
 import com.google.gson.*;
-import com.replaymod.core.ReplayMod;
 
-/** Opt-in RPC lifecycle. The engine's render-driven queue also runs while paused. */
+/** Opt-in RPC lifecycle. A render-driven queue also runs while paused, without engine queue locks. */
 public final class LegacyClientProxy extends LegacyServerProxy {
     @Override public void initialize() {
         final String token = System.getProperty("agenticreplay.token", "");
         if (token.isEmpty()) return;
         final LegacyReplayBridge replay = new LegacyReplayBridge();
         final LegacyClientControls live = new LegacyClientControls(replay);
-        new LegacyLifecycle(replay).register();
+        final LegacyClientQueue queue = new LegacyClientQueue();
+        new LegacyLifecycle(replay, queue).register();
         try {
             final LegacyHttpTransport transport = new LegacyHttpTransport(Integer.getInteger("agenticreplay.port", 8766), token,
-                    task -> ReplayMod.instance.runLater(task), (method, params) -> {
+                    queue::enqueue, (method, params) -> {
                 if ("capabilities".equals(method)) {
                     JsonObject result = new JsonObject();
                     result.addProperty("apiVersion", 1);

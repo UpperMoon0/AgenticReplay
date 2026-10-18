@@ -27,4 +27,27 @@ if (!replayMod.isFile()) throw new GradleException('Run python3 legacy-1.7.10/sc
 def replayHash = java.security.MessageDigest.getInstance('SHA-256').digest(replayMod.bytes).encodeHex().toString()
 if (replayHash != 'e8b0379ed3b03b3028145c71962aa141757844f2eb7b82ce5390a9cee5a8ce96')
     throw new GradleException('ReplayMod dependency checksum mismatch')
-dependencies { implementation rfg.deobf(files(replayMod)) }
+def compileReplayMod = file('libs/replaymod-1.7.10-2.5.2-compile.jar')
+if (!compileReplayMod.isFile()) throw new GradleException('Run the prepare_replaymod.py script to normalize the compile-only ZIP')
+// Verify the compile-only normalization cannot introduce or alter class/resource bytes.
+def sourceZip = new java.util.zip.ZipFile(replayMod)
+def compileZip = new java.util.zip.ZipFile(compileReplayMod)
+try {
+    def originalFiles = sourceZip.entries().findAll { !it.directory }.collect { it.name }.toSet()
+    def compiledFiles = compileZip.entries().findAll { !it.directory }.collect { it.name }
+    if (compiledFiles.size() != originalFiles.size() || compiledFiles.toSet() != originalFiles)
+        throw new GradleException('Normalized ReplayMod file inventory mismatch')
+    originalFiles.each { name ->
+        def original = sourceZip.getInputStream(sourceZip.getEntry(name)).withCloseable { it.bytes }
+        def normalized = compileZip.getInputStream(compileZip.getEntry(name)).withCloseable { it.bytes }
+        if (!java.util.Arrays.equals(original, normalized))
+            throw new GradleException('Normalized ReplayMod bytes changed: ' + name)
+    }
+} finally {
+    sourceZip.close()
+    compileZip.close()
+}
+dependencies { implementation rfg.deobf(files(compileReplayMod)) }
+tasks.withType(Jar).configureEach {
+    from('LICENSE.md') { into 'META-INF'; rename { 'LICENSE-agenticreplay.txt' } }
+}

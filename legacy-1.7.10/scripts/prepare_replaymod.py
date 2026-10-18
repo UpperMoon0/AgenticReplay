@@ -3,6 +3,8 @@
 import hashlib
 from pathlib import Path
 import urllib.request
+import zipfile
+import io
 
 URL = 'https://www.replaymod.com/download/download_new.php?version=1.7.10-2.5.2'
 SHA256 = 'e8b0379ed3b03b3028145c71962aa141757844f2eb7b82ce5390a9cee5a8ce96'
@@ -22,6 +24,21 @@ def main():
         temporary = DEST.with_suffix('.tmp')
         temporary.write_bytes(data)
         temporary.replace(DEST)
+    # Upstream has a duplicate assets/ directory entry. RFG rejects duplicate ZIP
+    # entries, so produce a local compile-only copy without directory records.
+    # Every class/resource byte and its ZipInfo metadata is preserved unchanged.
+    compiled = DEST.with_name('replaymod-1.7.10-2.5.2-compile.jar')
+    temporary = compiled.with_suffix('.tmp')
+    with zipfile.ZipFile(io.BytesIO(data)) as source, zipfile.ZipFile(temporary, 'w') as target:
+        seen = set()
+        for entry in source.infolist():
+            if entry.is_dir():
+                continue
+            if entry.filename in seen:
+                raise SystemExit('Duplicate non-directory entry in pinned dependency')
+            seen.add(entry.filename)
+            target.writestr(entry, source.read(entry))
+    temporary.replace(compiled)
     print('Verified ReplayMod 1.7.10-2.5.2:', SHA256)
 
 

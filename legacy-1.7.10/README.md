@@ -15,7 +15,7 @@ python3 legacy-1.7.10/scripts/prepare_replaymod.py
 
 Gradle 8.8 runs on Java 17 or 21; the mod compiles and tests with a provisioned Java 8 toolchain. RetroFuturaGradle 1.4.9 uses Forge 10.13.4.1614 and MCP `stable_12`. The engine was built for Forge 10.13.4.1558; runtime compatibility with a particular modpack still needs testing. The separate project deliberately does not evaluate the modern Loom build.
 
-The preparation script downloads the official engine from replaymod.com and verifies SHA-256 `e8b0379ed3b03b3028145c71962aa141757844f2eb7b82ce5390a9cee5a8ce96`. Gradle verifies that hash again and deobfuscates the dependency for compilation. It is never shaded into the adapter. Output is `legacy-1.7.10/build/libs/agenticreplay-1.7.10-0.7.0.jar`; use the reobfuscated main jar, not the sources/dev jars. CI uploads build output and test reports without publishing a release.
+The preparation script downloads the official engine from replaymod.com and verifies SHA-256 `e8b0379ed3b03b3028145c71962aa141757844f2eb7b82ce5390a9cee5a8ce96`. The official archive contains a duplicate `assets/` directory record. The preparation script creates a separate compile-only ZIP without directory records; Gradle verifies that every class/resource byte exactly matches the hash-pinned original before deobfuscation. The official runtime jar remains untouched. It is never shaded into the adapter. Output is `legacy-1.7.10/build/libs/agenticreplay-1.7.10-0.7.0.jar`; use the reobfuscated main jar, not the sources/dev jars. CI uploads build output and test reports without publishing a release.
 
 ## Run
 
@@ -26,12 +26,12 @@ Use a Java 8 graphical Forge 1.7.10 client, with the adapter and official `repla
 -Dagenticreplay.port=8766
 ```
 
-With no token the API stays disabled. It binds only to `127.0.0.1`. POST JSON to `/rpc` with `Authorization: Bearer <token>`. The request/response envelope matches the modern API: `{"method":"status","params":{}}` returns `{"ok":true,"result":...}`. Inputs are capped at 64 KiB. Client work uses ReplayMod's render-driven task queue, including while replay time is paused. A 30-second timeout cancels work that has not started; already-started work has an uncertain result, so inspect state before retrying.
+With no token the API stays disabled. It binds only to `127.0.0.1`. POST JSON to `/rpc` with `Authorization: Bearer <token>`. The request/response envelope matches the modern API: `{"method":"status","params":{}}` returns `{"ok":true,"result":...}`. Inputs are capped at 64 KiB. Client work uses a bounded render-tick queue, including while replay time is paused. It never holds a queue lock while calling the engine, avoiding legacy sender/queue lock inversion during seeks. Concurrent seeks are rejected until `status.seekInProgress` becomes false. A 30-second timeout cancels work that has not started; already-started work has an uncertain result, so inspect state before retrying.
 
 Supported methods:
 
 - `capabilities`, `status`
-- `client.connect` (`address`, optional `recording`, default true), `client.disconnect`, `client.background` (`pauseOnLostFocus`)
+- `client.connect` (`address`, optional `recording`, default true), `client.disconnect`, `client.background` (`enabled`, or explicit `pauseOnLostFocus`; window hiding unsupported)
 - `player.state`, `player.look` (immediate `yaw`, `pitch`), `player.select` (`slot` 0..8), `player.screen.close`
 - `replay.list/open/close/rename/delete`
 - `recording.set/marker`
@@ -50,3 +50,11 @@ The private user-provided `UpperMoon0/MC-Modding-Src` 1.7.10 tree was inspected 
 The runtime is official [ReplayMod 2.5.2 source](https://github.com/ReplayMod/ReplayMod/tree/ff47174fd6e94c051eaf6c0a0f3f4745a6b0e885), downloaded through the [official downloads page](https://www.replaymod.com/download/). Upstream identifies this as GPL-3.0-or-later. This new adapter module is offered under GPL-3.0-or-later; its license copy is in `LICENSE.md`. The repository's existing modern code and LGPL license are unchanged. Distribution must retain applicable notices and provide corresponding adapter source; the engine remains a separate download under its own terms. The 2.5.2 runtime is historical; this project does not claim ongoing upstream 1.7.10 maintenance.
 
 The bridge uses typed engine APIs except narrowly pinned private UI fields for recording buttons and marker refresh. Those fields are checked at initialization, so incompatible engine changes fail visibly rather than silently losing recording controls.
+
+## Verification record
+
+- Local Java 8 compilation, reobfuscation and full legacy build passed.
+- Transport, render-queue, replay-path and pinned engine ABI tests cover authentication, bounds, timeout cancellation, queue isolation, filename safety and four private engine fields.
+- No graphical Minecraft session has been launched in this environment. No recording/replay round trip, modded-server handshake or rendered export is claimed verified yet.
+
+Required in-game acceptance: install both jars, query capabilities/status, connect with recording enabled, add a marker, disconnect and wait for `.mcpr`, open it, pause/seek/resume, move/spectate the camera, close via both API and UI, verify HUD/FOV restoration, then exercise the original path/export UI. Repeat against the intended modpack before relying on production captures.

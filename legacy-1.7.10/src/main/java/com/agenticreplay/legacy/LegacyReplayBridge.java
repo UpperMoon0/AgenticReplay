@@ -13,6 +13,7 @@ import com.replaymod.recording.gui.GuiRecordingControls;
 import com.replaymod.recording.handler.ConnectionEventHandler;
 import com.replaymod.recording.packet.PacketListener;
 import com.replaymod.replay.ReplayHandler;
+import com.replaymod.replay.FullReplaySender;
 import com.replaymod.replay.ReplayModReplay;
 import com.replaymod.replay.camera.CameraEntity;
 import com.replaymod.replay.gui.overlay.GuiMarkerTimeline;
@@ -20,6 +21,8 @@ import com.replaymod.replaystudio.data.Marker;
 import com.replaymod.replaystudio.replay.ReplayFile;
 import com.replaymod.replaystudio.replay.ReplayMetaData;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.GuiConnecting;
+import net.minecraft.client.gui.GuiDownloadTerrain;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLivingBase;
 
@@ -38,8 +41,8 @@ import java.util.Set;
 
 /**
  * Client-thread facade for the pinned official ReplayMod 1.7.10-2.5.2 runtime.
- * The caller must dispatch through ReplayMod.runLater, whose queue also runs
- * while replay time is paused. No Minecraft or ReplayMod mutation is thread-safe.
+ * The caller dispatches on render ticks without holding a task-queue lock,
+ * including while replay time is paused. Mutations are client-thread only.
  */
 public final class LegacyReplayBridge {
     private static final String[] METHODS = {
@@ -100,6 +103,8 @@ public final class LegacyReplayBridge {
                 int time = integer(p, "time", 0);
                 boolean retain = bool(p, "retainCamera", true);
                 if (time < 0 || time > handler.getReplayDuration()) throw new IllegalArgumentException("time outside replay");
+                if (((FullReplaySender) handler.getReplaySender()).isHurrying())
+                    throw new IllegalStateException("A replay seek is already in progress; wait for status.seekInProgress=false");
                 handler.doJump(time, retain);
                 JsonObject result = status();
                 result.addProperty("requestedTime", time);
@@ -152,6 +157,7 @@ public final class LegacyReplayBridge {
             if (openedName != null) out.addProperty("name", openedName);
             out.addProperty("duration", handler.getReplayDuration());
             out.addProperty("time", handler.getReplaySender().currentTimeStamp());
+            out.addProperty("seekInProgress", ((FullReplaySender) handler.getReplaySender()).isHurrying());
             out.addProperty("speed", handler.getReplaySender().getReplaySpeed());
             out.addProperty("paused", handler.getReplaySender().paused());
             out.addProperty("suppressMovement", handler.shouldSuppressCameraMovements());
@@ -188,6 +194,8 @@ public final class LegacyReplayBridge {
     }
 
     private JsonObject openReplay(JsonObject p) throws Exception {
+        if (mc.currentScreen instanceof GuiConnecting || mc.currentScreen instanceof GuiDownloadTerrain)
+            throw new IllegalStateException("Finish or cancel the pending server connection before opening a replay");
         if (mc.theWorld != null && currentReplay() == null) throw new IllegalStateException("Disconnect before opening a replay");
         if (currentReplay() != null) throw new IllegalStateException("Close the current replay first");
         String name = text(p, "name");
