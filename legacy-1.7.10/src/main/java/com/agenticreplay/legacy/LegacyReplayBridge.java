@@ -103,8 +103,7 @@ public final class LegacyReplayBridge {
                 int time = integer(p, "time", 0);
                 boolean retain = bool(p, "retainCamera", true);
                 if (time < 0 || time > handler.getReplayDuration()) throw new IllegalArgumentException("time outside replay");
-                if (((FullReplaySender) handler.getReplaySender()).isHurrying())
-                    throw new IllegalStateException("A replay seek is already in progress; wait for status.seekInProgress=false");
+                requireSeekIdle(handler);
                 handler.doJump(time, retain);
                 JsonObject result = status();
                 result.addProperty("requestedTime", time);
@@ -287,6 +286,7 @@ public final class LegacyReplayBridge {
 
     private JsonObject setCamera(JsonObject p) throws Exception {
         ReplayHandler handler = replay();
+        requireSeekIdle(handler);
         CameraEntity camera = camera();
         if (handler.getRestrictions().isOnlyFirstPerson() || handler.getRestrictions().isOnlyRecordingPlayer()) {
             throw new IllegalStateException("The recording restricts free-camera movement");
@@ -330,6 +330,7 @@ public final class LegacyReplayBridge {
 
     private JsonObject spectate(JsonObject p) throws Exception {
         ReplayHandler handler = replay();
+        requireSeekIdle(handler);
         CameraEntity camera = camera();
         int id = integer(p, "entityId", -1);
         if (id == -1) {
@@ -444,6 +445,10 @@ public final class LegacyReplayBridge {
         ReplayHandler result = currentReplay();
         if (result == null) throw new IllegalStateException("No replay is open");
         return result;
+    }
+    private static void requireSeekIdle(ReplayHandler handler) {
+        if (((FullReplaySender) handler.getReplaySender()).isHurrying())
+            throw new IllegalStateException("A replay seek is in progress; wait for status.seekInProgress=false");
     }
     private static CameraEntity camera() {
         CameraEntity result = replay().getCameraEntity();

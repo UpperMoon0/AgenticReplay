@@ -26,7 +26,7 @@ Use a Java 8 graphical Forge 1.7.10 client, with the adapter and official `repla
 -Dagenticreplay.port=8766
 ```
 
-With no token the API stays disabled. It binds only to `127.0.0.1`. POST JSON to `/rpc` with `Authorization: Bearer <token>`. The request/response envelope matches the modern API: `{"method":"status","params":{}}` returns `{"ok":true,"result":...}`. Inputs are capped at 64 KiB. Client work uses a bounded render-tick queue, including while replay time is paused. It never holds a queue lock while calling the engine, avoiding legacy sender/queue lock inversion during seeks. Concurrent seeks are rejected until `status.seekInProgress` becomes false. A 30-second timeout cancels work that has not started; already-started work has an uncertain result, so inspect state before retrying.
+With no token the API stays disabled. It binds only to `127.0.0.1`. POST JSON to `/rpc` with `Authorization: Bearer <token>`. The request/response envelope matches the modern API: `{"method":"status","params":{}}` returns `{"ok":true,"result":...}`. Inputs are capped at 64 KiB. Client work uses a bounded render-tick queue, including while replay time is paused. It never holds a queue lock while calling the engine, avoiding legacy sender/queue lock inversion during seeks. Additional seeks and camera pose/spectator changes are rejected until `status.seekInProgress` becomes false. A 30-second timeout cancels work that has not started; already-started work has an uncertain result, so inspect state before retrying.
 
 Supported methods:
 
@@ -54,7 +54,8 @@ The bridge uses typed engine APIs except narrowly pinned private UI fields for r
 ## Verification record
 
 - Local Java 8 compilation, reobfuscation and full legacy build passed.
-- Transport, render-queue, replay-path and pinned engine ABI tests cover authentication, bounds, timeout cancellation, queue isolation, filename safety and four private engine fields.
+- Sixteen JUnit tests passed. Transport, render-queue, replay-path and pinned engine ABI tests cover authentication, bounds, timeout cancellation, queue isolation, filename safety and four private engine fields.
+- Independent binary linkage review resolved every referenced Minecraft/Forge/ReplayMod member against the exact 1.7.10 runtime inputs; adapter bytecode targets Java 8.
 - No graphical Minecraft session has been launched in this environment. No recording/replay round trip, modded-server handshake or rendered export is claimed verified yet.
 
 Required in-game acceptance: install both jars, query capabilities/status, connect with recording enabled, add a marker, disconnect and wait for `.mcpr`, open it, pause/seek/resume, move/spectate the camera, close via both API and UI, verify HUD/FOV restoration, then exercise the original path/export UI. Repeat against the intended modpack before relying on production captures.
