@@ -646,12 +646,10 @@ public final class AgentReplayApi {
     private static String string(JsonObject p, String key, String fallback) { return p.has(key) ? text(p, key) : fallback; }
     private static boolean bool(JsonObject p, String key, boolean fallback) { return p.has(key) ? p.get(key).getAsBoolean() : fallback; }
     private static int integer(JsonObject p, String key, int fallback) {
-        double value = number(p, key, fallback);
-        if (value != Math.rint(value) || value < Integer.MIN_VALUE || value > Integer.MAX_VALUE) throw new IllegalArgumentException(key + " must be an integer");
-        return (int) value;
+        return ApiJson.integer(number(p, key, fallback), key, Integer.MIN_VALUE, Integer.MAX_VALUE);
     }
     private static double number(JsonObject p, String key, double fallback) {
         double value = p.has(key) ? p.get(key).getAsDouble() : fallback;
-        if (!Double.isFinite(value)) throw new IllegalArgumentException(key + " must be finite"); return value;
+        return ApiJson.finite(value, key);
     }
 }

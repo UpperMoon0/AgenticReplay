@@ -86,31 +86,9 @@ final class PlayerActionPlan {
         }
     }
 
-    static String text(JsonObject p, String key) {
-        JsonElement v = p.get(key);
-        if (v == null || !v.isJsonPrimitive() || !v.getAsJsonPrimitive().isString() || v.getAsString().isBlank())
-            throw new IllegalArgumentException(key + " must be a nonempty string");
-        return v.getAsString();
-    }
-    static boolean bool(JsonObject p, String key) {
-        JsonElement v = p.get(key);
-        if (v == null || !v.isJsonPrimitive() || !v.getAsJsonPrimitive().isBoolean()) throw new IllegalArgumentException(key + " must be boolean");
-        return v.getAsBoolean();
-    }
-    static double number(JsonObject p, String key) {
-        JsonElement v = p.get(key);
-        if (v == null || !v.isJsonPrimitive() || !v.getAsJsonPrimitive().isNumber() || !Double.isFinite(v.getAsDouble()))
-            throw new IllegalArgumentException(key + " must be a finite number");
-        return v.getAsDouble();
-    }
-    static int integer(JsonObject p, String key, int fallback, int min, int max) {
-        double v = p.has(key) ? number(p, key) : fallback;
-        if (v != Math.rint(v) || v < min || v > max) throw new IllegalArgumentException(key + " must be an integer in " + min + ".." + max);
-        return (int) v;
-    }
-    static JsonObject object(JsonObject p, String key) {
-        JsonElement v = p.get(key);
-        if (v == null || !v.isJsonObject()) throw new IllegalArgumentException(key + " must be an object");
-        return v.getAsJsonObject();
-    }
+    static String text(JsonObject p, String key) { return ApiJson.text(p, key); }
+    static boolean bool(JsonObject p, String key) { return ApiJson.bool(p, key); }
+    static double number(JsonObject p, String key) { return ApiJson.number(p, key); }
+    static int integer(JsonObject p, String key, int fallback, int min, int max) { return ApiJson.integer(p, key, fallback, min, max); }
+    static JsonObject object(JsonObject p, String key) { return ApiJson.object(p, key); }
 }

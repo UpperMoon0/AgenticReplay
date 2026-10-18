@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.7.0
+
+- Report loaded Angelica versions and explicitly unverified shader export, with pinned GTNH renderer compatibility findings and a practical shader-off recording workflow.
+
+- Add an isolated Java 8 agent adapter for the historical official ReplayMod 1.7.10-2.5.2 engine, with authenticated loopback recording/replay/camera and basic live-client controls.
+- Share Java 8-compatible HTTP/security, file-safety and JSON-validation source/tests between both versions, with Java 8/17 and Gson 2.2.4/2.10.1 contract checks.
+- Retain modern 1.20.1 engine/features while publishing a separate legacy artifact; both use the shared 0.7.0 version property, with explicit legacy capability limits and dependency provenance.
+
 ## 0.6.0
 
 - Preserve actor movement/turning timing and instantaneous teleports in playback with exact actor frames alongside indexed vanilla packets.

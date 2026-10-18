@@ -31,3 +31,5 @@ repo
 /mc1201-*.log
 __pycache__/
 *.pyc
+
+/legacy-1.7.10/libs/

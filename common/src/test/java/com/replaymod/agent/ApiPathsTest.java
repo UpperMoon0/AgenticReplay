@@ -12,7 +12,7 @@ public class ApiPathsTest {
     @Test public void rejectsTraversalAndDriveNames() throws Exception {
         Path root = Files.createTempDirectory("agent-replay-test");
         try {
-            for (String name : new String[]{"../shot.mcpr", "..\\shot.mcpr", "C:shot.mcpr", "/shot.mcpr", "shot.txt", ""}) {
+            for (String name : new String[]{"../shot.mcpr", "..\\shot.mcpr", "C:shot.mcpr", "/shot.mcpr", "shot.txt", "", ".mcpr", "bad\n.mcpr", "bad\t.mcpr"}) {
                 try { ApiPaths.resolve(root, name, ".mcpr"); fail("Accepted " + name); }
                 catch (IllegalArgumentException expected) {}
             }
