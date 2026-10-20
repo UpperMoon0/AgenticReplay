@@ -32,6 +32,9 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
       - name: Build and test ${{ matrix.module }}
         run: chmod +x gradlew && ./gradlew :${{ matrix.module }}:build --console=plain
+      - name: Verify camera export runtime dependencies
+        if: matrix.module != 'common'
+        run: python3 scripts/check_export_dependencies.py $(find ${{ matrix.module }}/build/libs -name "*.jar" ! -name "*-dev*.jar" ! -name "*-sources.jar")
       - name: Verify NeoForge packaging
         if: matrix.module == 'neoforge-26.1.2'
         run: python3 scripts/check_mod_jar.py neoforge-26.1.2/build/libs/*.jar

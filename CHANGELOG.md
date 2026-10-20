@@ -2,6 +2,8 @@
 
 ## 0.7.1
 
+- Package the glTF implementations and Jackson 2.20 runtime required by camera motion receipts; check both distributables in CI.
+
 - Add optional per-frame cinematic entity motion tracks to both export engines, independent of uneven replay packet timing. Restore overridden poses before simulation and at export exit.
 - Preserve Forge native DH/Oculus filming controls through bounded optional public APIs.
 

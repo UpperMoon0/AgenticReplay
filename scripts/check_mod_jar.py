@@ -10,6 +10,7 @@ import zipfile
 def check(path):
     with zipfile.ZipFile(path) as archive:
         names = set(archive.namelist())
+        assert "de/javagl/jgltf/impl/v2/GlTF.class" in names, "Camera export requires glTF implementations"
         metadata = tomllib.loads(archive.read("META-INF/neoforge.mods.toml").decode())
         assert [mod["modId"] for mod in metadata["mods"]] == ["replaymod"]
         assert metadata["mods"][0]["displayName"] == "AgenticReplay"

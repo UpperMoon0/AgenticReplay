@@ -25,6 +25,7 @@ dependencies {
     embedded 'com.github.viaversion:opennbt:0a02214'
     embedded 'com.github.ReplayMod:lwjgl-utils:27dcd66'
     embedded 'com.github.javagl.JglTF:jgltf-model:3af6de4'
+    embedded 'com.fasterxml.jackson.core:jackson-databind:2.20.0'
     embedded 'com.github.ReplayMod.JavaBlend:2.79.0:a0696f8'
     embedded 'org.aspectj:aspectjrt:1.8.2'
     embedded 'org.lwjgl:lwjgl-tinyexr:3.4.1'
