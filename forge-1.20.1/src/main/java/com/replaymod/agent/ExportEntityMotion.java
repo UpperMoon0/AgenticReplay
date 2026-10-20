@@ -16,15 +16,25 @@ import java.util.*;
 public final class ExportEntityMotion {
     private final List<ExportEntityTrack> tracks;
     private final List<Runnable> restore = new ArrayList<>();
+    private ExportFrameVisibility.Scope visibility;
     public ExportEntityMotion(List<ExportEntityTrack> tracks) { this.tracks = List.copyOf(tracks); }
     public void restore() {
-        for (int i=restore.size()-1; i>=0; i--) restore.get(i).run();
-        restore.clear();
+        try {
+            for (int i=restore.size()-1; i>=0; i--) restore.get(i).run();
+        } finally {
+            restore.clear();
+            if (visibility != null) { visibility.close(); visibility = null; }
+        }
     }
     public void apply(ReplayHandler handler, double outputTime) {
         if (tracks.isEmpty()) return;
         var camera = handler.getCameraEntity();
         if (camera == null) throw new IllegalStateException("Replay camera unavailable");
+        if (visibility != null) throw new IllegalStateException("Restore the previous export frame before applying another");
+        visibility = ExportFrameVisibility.open(tracks.stream().map(track -> {
+            var pose = track.sample(outputTime);
+            return new ExportFrameVisibility.Actor(track.entityId(), pose.x(), pose.y(), pose.z());
+        }).toList());
         for (ExportEntityTrack track : tracks) {
             Entity e = camera.getEntityWorld().getEntityById(track.entityId());
             if (e == null || e == camera) throw new IllegalStateException("Export entity unavailable: " + track.entityId());

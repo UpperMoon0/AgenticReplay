@@ -27,6 +27,8 @@
     "MixinActorReplayPayload",
     "MixinAgentBackgroundWindow",
     "MixinAgentReplayViewDistance",
+    "MixinExportEntityGeometryReadiness",
+    "MixinExportEmbeddiumEntityVisibility",
     "MinecraftAccessor",
     //#if MC>=11900
     "SimpleOptionAccessor",

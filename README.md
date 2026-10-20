@@ -388,3 +388,7 @@ the recorded state. Gliding animation and velocity use the output clock, includi
 paused-world exports, and all overrides are restored with the entity position.
 This does not perform collision avoidance: authors must validate the entire player
 volume against the recorded scene before rendering a reconstructed trajectory.
+On Forge, explicitly tracked actors bypass terrain-section readiness and optional
+Embeddium section occlusion during their export frame. This keeps airborne actors
+visible above DH terrain or uncompiled sections. Normal frustum checks still apply;
+the eligibility scope is cleared before simulation and when export exits.

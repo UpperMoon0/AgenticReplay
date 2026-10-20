@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.4
+
+- Keep explicitly tracked Forge export actors eligible for rendering across uncompiled terrain sections, including optional Embeddium visibility checks. Scope this eligibility to the authored render frame and restore normal checks before simulation and on export exit.
+
 ## 0.7.3
 
 - Reject Forge graphics API access while the loading overlay is active, before initializing optional mod APIs. Repeated shader-state requests no longer start redundant resource reloads.
