@@ -6,6 +6,8 @@ import org.spongepowered.asm.mixin.gen.Accessor;
 
 @Mixin(LivingEntity.class)
 public interface EntityLivingBaseAccessor {
+    @Accessor("roll") int exportFlightTicks();
+    @Accessor("roll") void exportFlightTicks(int value);
     //#if MC>=11400
     @Accessor("serverX")
     double getInterpTargetX();

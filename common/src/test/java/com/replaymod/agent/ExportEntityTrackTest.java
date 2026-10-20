@@ -38,4 +38,26 @@ public class ExportEntityTrackTest {
         JsonArray duplicate=input(); duplicate.add(duplicate.get(0).deepCopy());
         try { ExportEntityTrack.parse(duplicate); fail("duplicate"); } catch(IllegalArgumentException expected) {}
     }
+    @Test public void flightPoseSwitchesAtKnotsAndClockSupportsRandomSeeks() {
+        JsonArray a=input(); JsonObject track=a.get(0).getAsJsonObject(); track.addProperty("elytra",true);
+        JsonArray poses=track.getAsJsonArray("poses");
+        poses.get(0).getAsJsonObject().addProperty("pose","standing");
+        JsonObject glide=poses.get(0).getAsJsonObject().deepCopy(); glide.addProperty("time",1000); glide.addProperty("pose","fall_flying");
+        JsonObject landed=poses.get(1).getAsJsonObject().deepCopy(); landed.addProperty("time",3000); landed.addProperty("pose","standing");
+        poses.remove(1); poses.add(glide); poses.add(landed);
+        var parsed=ExportEntityTrack.parse(a).get(0); assertTrue(parsed.elytra());
+        assertEquals("standing",parsed.sample(999.99).pose());
+        assertEquals("fall_flying",parsed.sample(1000).pose()); assertEquals(1,parsed.flightTicks(1000));
+        assertEquals(21,parsed.flightTicks(2000)); assertEquals(0,parsed.flightTicks(3000));
+        assertEquals(1,parsed.flightTicks(1000)); assertEquals(0,parsed.flightTicks(-1));
+        assertNull(ExportEntityTrack.parse(input()).get(0).sample(50).pose());
+    }
+    @Test public void flightValidationRejectsCoercionAndUnknownPoses() {
+        for (String json : new String[]{"1","\"true\"","null"}) {
+            JsonArray a=input();a.get(0).getAsJsonObject().add("elytra",JsonParser.parseString(json));
+            try { ExportEntityTrack.parse(a);fail(json); } catch(IllegalArgumentException expected) {}
+        }
+        JsonArray a=input();a.get(0).getAsJsonObject().getAsJsonArray("poses").get(0).getAsJsonObject().addProperty("pose","invalid");
+        try { ExportEntityTrack.parse(a);fail("pose"); } catch(IllegalArgumentException expected) {}
+    }
 }

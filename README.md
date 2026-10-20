@@ -377,3 +377,11 @@ Forge 1.20.1 `client.graphics` reads or sets `clouds`, `dhEnabled`, `shadersEnab
 and `dhDistance` (integer 16..256) through native optional DH/Iris/Oculus APIs.
 It is unavailable during path playback/export. Read back actual settings before
 filming; enabled flags alone do not prove a shader compiled successfully.
+
+Motion tracks may set `elytra: true` to show equipped wings. Pose samples may
+optionally set `pose` to `standing` or `fall_flying`; the last authored pose is
+inherited and switches exactly at its sample time. Omitted pose fields preserve
+the recorded state. Gliding animation and velocity use the output clock, including
+paused-world exports, and all overrides are restored with the entity position.
+This does not perform collision avoidance: authors must validate the entire player
+volume against the recorded scene before rendering a reconstructed trajectory.

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.2
+
+- Support optional elytra equipment and stepped standing/gliding poses in export motion tracks, with an output-frame flight animation clock. Restore pose, flight flags, animation clock, velocity and chest equipment before replay simulation and on export exit.
+
 ## 0.7.1
 
 - Package the glTF implementations and Jackson 2.20 runtime required by camera motion receipts; check both distributables in CI.

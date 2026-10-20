@@ -3,6 +3,13 @@ package com.replaymod.agent;
 import com.replaymod.replay.ReplayHandler;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.EntityPose;
+import net.minecraft.entity.EquipmentSlot;
+import net.minecraft.item.ItemStack;
+import net.minecraft.item.Items;
+import net.minecraft.util.math.Vec3d;
+import com.replaymod.core.mixin.ActorEntityAccessor;
+import com.replaymod.replay.mixin.EntityLivingBaseAccessor;
 import java.util.*;
 
 /** Render-only override, restored before simulation and on every exit path. */
@@ -11,7 +18,7 @@ public final class ExportEntityMotion {
     private final List<Runnable> restore = new ArrayList<>();
     public ExportEntityMotion(List<ExportEntityTrack> tracks) { this.tracks = List.copyOf(tracks); }
     public void restore() {
-        for (Runnable undo : restore) undo.run();
+        for (int i=restore.size()-1; i>=0; i--) restore.get(i).run();
         restore.clear();
     }
     public void apply(ReplayHandler handler, double outputTime) {
@@ -37,6 +44,35 @@ public final class ExportEntityMotion {
                     living.headYaw=h; living.prevHeadYaw=ph; living.bodyYaw=b; living.prevBodyYaw=pb;
                 }
             });
+            var authored = track.sample(outputTime);
+            if (authored.pose() != null || track.elytra()) {
+                if (!(e instanceof LivingEntity living)) throw new IllegalStateException("Pose/equipment tracks require a living entity");
+                var originalPose = e.getPose();
+                var originalVelocity = e.getVelocity();
+                boolean flying = living.isFallFlying();
+                var flight = (EntityLivingBaseAccessor) living;
+                int originalFlightTicks = flight.exportFlightTicks();
+                ItemStack chest = living.getEquippedStack(EquipmentSlot.CHEST).copy();
+                restore.add(() -> {
+                    e.setPose(originalPose);
+                    ((ActorEntityAccessor)e).actorSetFlag(7, flying);
+                    flight.exportFlightTicks(originalFlightTicks);
+                    e.setVelocity(originalVelocity);
+                    if (track.elytra()) living.equipStack(EquipmentSlot.CHEST, chest);
+                });
+                if (track.elytra()) living.equipStack(EquipmentSlot.CHEST, new ItemStack(Items.ELYTRA));
+                if (authored.pose() != null) {
+                    boolean glide = authored.pose().equals("fall_flying");
+                    e.setPose(glide ? EntityPose.FALL_FLYING : EntityPose.STANDING);
+                    ((ActorEntityAccessor)e).actorSetFlag(7, glide);
+                    flight.exportFlightTicks(track.flightTicks(outputTime));
+                    if (glide) {
+                        var before = track.sample(outputTime-1);
+                        var after = track.sample(outputTime+1);
+                        e.setVelocity(new Vec3d((after.x()-before.x())*25, (after.y()-before.y())*25, (after.z()-before.z())*25));
+                    }
+                }
+            }
             var p = track.sample(outputTime);
             e.setPosition(p.x(),p.y(),p.z());
             e.prevX=e.lastRenderX=p.x(); e.prevY=e.lastRenderY=p.y(); e.prevZ=e.lastRenderZ=p.z();
