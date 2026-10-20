@@ -377,6 +377,9 @@ Forge 1.20.1 `client.graphics` reads or sets `clouds`, `dhEnabled`, `shadersEnab
 and `dhDistance` (integer 16..256) through native optional DH/Iris/Oculus APIs.
 It is unavailable during path playback/export. Read back actual settings before
 filming; enabled flags alone do not prove a shader compiled successfully.
+Wait for `player.state.loading=false` before accessing graphics controls. Requests
+during a loading overlay are rejected before optional APIs are initialized, and
+requesting the current shader state does not trigger another resource reload.
 
 Motion tracks may set `elytra: true` to show equipped wings. Pose samples may
 optionally set `pose` to `standing` or `fall_flying`; the last authored pose is

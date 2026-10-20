@@ -24,8 +24,20 @@ final class NativeGraphicsControls {
     private static Class<?> optional(String name) {
         try { return Class.forName(name); } catch (ClassNotFoundException e) { return null; }
     }
+    @FunctionalInterface interface ReadyGraphics { JsonObject apply() throws Exception; }
+    @FunctionalInterface interface ShaderStateChange { void apply(boolean enabled) throws Exception; }
+    static JsonObject whenReady(boolean loading, ReadyGraphics action) throws Exception {
+        if (loading) throw new IllegalStateException("Wait for player.state.loading=false before accessing graphics controls");
+        return action.apply();
+    }
+    static void applyShaderState(boolean current, boolean requested, ShaderStateChange change) throws Exception {
+        if (current != requested) change.apply(requested);
+    }
     static JsonObject apply(MinecraftClient mc, JsonObject p) throws Exception {
         validate(p);
+        return whenReady(mc.getOverlay() != null, () -> applyReady(mc, p));
+    }
+    private static JsonObject applyReady(MinecraftClient mc, JsonObject p) throws Exception {
         Class<?> dh = optional("com.seibel.distanthorizons.api.DhApi$Delayed");
         Class<?> iris = optional("net.irisshaders.iris.api.v0.IrisApi");
         if ((p.has("dhEnabled") || p.has("dhDistance")) && dh == null)
@@ -61,7 +73,11 @@ final class NativeGraphicsControls {
             Object api = iris.getMethod("getInstance").invoke(null);
             Object config = iris.getMethod("getConfig").invoke(api);
             Class<?> configType = Class.forName("net.irisshaders.iris.api.v0.IrisApiConfig");
-            if (p.has("shadersEnabled")) configType.getMethod("setShadersEnabledAndApply", boolean.class).invoke(config, p.get("shadersEnabled").getAsBoolean());
+            if (p.has("shadersEnabled")) {
+                boolean current = (Boolean)configType.getMethod("areShadersEnabled").invoke(config);
+                applyShaderState(current, p.get("shadersEnabled").getAsBoolean(),
+                    enabled -> configType.getMethod("setShadersEnabledAndApply", boolean.class).invoke(config, enabled));
+            }
             out.addProperty("shadersEnabled", (Boolean)configType.getMethod("areShadersEnabled").invoke(config));
         }
         out.addProperty("clouds", mc.options.getCloudRenderMode().getValue() != CloudRenderMode.OFF);

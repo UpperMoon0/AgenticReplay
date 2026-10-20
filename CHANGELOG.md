@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.3
+
+- Reject Forge graphics API access while the loading overlay is active, before initializing optional mod APIs. Repeated shader-state requests no longer start redundant resource reloads.
+
 ## 0.7.2
 
 - Support optional elytra equipment and stepped standing/gliding poses in export motion tracks, with an output-frame flight animation clock. Restore pose, flight flags, animation clock, velocity and chest equipment before replay simulation and on export exit.
