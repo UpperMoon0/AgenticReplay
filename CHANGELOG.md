@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.5
+
+- Update optional Forge Distant Horizons camera/detail work on every exported frame, including frozen replay time channels. Run it after restoring the render viewport; do not advance world time to refresh terrain.
+
 ## 0.7.4
 
 - Keep explicitly tracked Forge export actors eligible for rendering across uncompiled terrain sections, including optional Embeddium visibility checks. Scope this eligibility to the authored render frame and restore normal checks before simulation and on export exit.

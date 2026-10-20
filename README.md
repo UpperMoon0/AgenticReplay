@@ -392,3 +392,7 @@ On Forge, explicitly tracked actors bypass terrain-section readiness and optiona
 Embeddium section occlusion during their export frame. This keeps airborne actors
 visible above DH terrain or uncompiled sections. Normal frustum checks still apply;
 the eligibility scope is cleared before simulation and when export exits.
+Forge exports also update optional Distant Horizons camera/detail work per output
+frame. Frozen time channels do not emit normal Minecraft ticks, so this keeps DH's
+camera quadtree current without advancing the recorded world. Pre-generated terrain
+and sufficient discarded lead-in frames are still required for asynchronous loading.

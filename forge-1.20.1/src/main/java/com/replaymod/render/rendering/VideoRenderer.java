@@ -322,6 +322,10 @@ public class VideoRenderer implements RenderInfo {
         // change Minecraft's display size back
         guiWindow.unbind();
 
+        // Frozen replay time yields no Minecraft ticks. DH still needs its camera
+        // quadtree update for every output frame, with the render viewport bound.
+        com.replaymod.agent.NativeDistantTerrain.tick();
+
         if (cameraPathExporter != null) {
             cameraPathExporter.recordFrame(timer.tickDelta);
         }
