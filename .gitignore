@@ -31,3 +31,12 @@ repo
 /mc1201-*.log
 __pycache__/
 *.pyc
+
+/port-*.log
+
+/.refs/
+
+/neoforge-26.1.2/libs/ReplayStudio-master-SNAPSHOT*.jar
+
+# Runtime logs remain local in every loader module.
+**/logs/

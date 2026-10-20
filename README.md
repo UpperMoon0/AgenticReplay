@@ -1,6 +1,27 @@
 # AgenticReplay
 
-Forge 1.20.1 fork of [ReForgedPlay](https://github.com/ferriarnus/ReForgedPlay), based on [ReplayMod](https://github.com/ReplayMod/ReplayMod).
+Multi-version agent-controlled fork of [ReForgedPlay](https://github.com/ferriarnus/ReForgedPlay), based on [ReplayMod](https://github.com/ReplayMod/ReplayMod).
+Supported clients: **Forge 1.20.1** and **NeoForge 26.1.2**.
+
+The workspace follows the same layout as the other multi-version mods:
+
+| Module | Purpose | Java |
+| --- | --- | --- |
+| `common` | Shared authenticated HTTP transport, validation and action planners | 17 |
+| `forge-1.20.1` | Existing Forge replay engine and client adapters | 17 |
+| `neoforge-26.1.2` | Standalone NeoForge replay engine and modern client adapters | 25 |
+
+Use Java 21 to run the Gradle 8.14 wrapper; toolchains select Java 17 or 25 for each module.
+Build one lane with `./gradlew :forge-1.20.1:build` or
+`./gradlew :neoforge-26.1.2:build`. `./gradlew buildAll` builds and tests every module;
+`./gradlew testAllVersions` runs their regression suites. JARs appear in each
+loader module's `build/libs` directory. Targeted tasks configure only their lane.
+
+The 26.1.2 engine is based on ReForgedPlay's 26.1 port and uses a pinned,
+protocol-775-compatible ReplayStudio library; see [library provenance](neoforge-26.1.2/libs/README.md).
+Replays contain Minecraft-version-specific packets. Record and play back with the
+matching client version; the workspace does not convert 1.20.1 recordings to 26.1.2.
+
 Agent control uses a versioned Java facade and an opt-in authenticated loopback HTTP endpoint. Existing UI remains usable.
 
 ## Enable the API
@@ -74,13 +95,18 @@ dimensions and fresh player state. It retains the actual HUD/F3 display, require
 live gameplay with no screen or replay open, and is bounded to 1920x1080 pixels
 and 6 MiB. It neither renders a replacement camera nor reads the desktop.
 
+On 26.1.2, `capture.frame` reads the current live or replay framebuffer without
+installing an export camera handler; it retains the current HUD setting and uses
+the same pixel/transfer limits. `status.renderCamera` reports the actual renderer
+camera pose, initialization and entity type alongside the logical replay camera.
+
 `capture.start` accepts width/height and optional `thumbnail:true`; poll capture.status with captureId for a PNG base64 preview.
 Capture is queued and cannot overlap mutations. `replay.process` applies cut/split markers to a closed replay and returns processId;
 poll process.status for progress and output file names. Originals are retained in ReplayMod's raw directory.
 Marker names `_RM_START_CUT`, `_RM_END_CUT`, and `_RM_SPLIT` provide unattended trimming/splitting through markers.set and replay.process.
 
 Runtime modpack and shader compatibility must be tested with the actual client. Third-party extensions and online publishing integrations are outside this client-control API.
-GPL-3.0-or-later; upstream credits and the internal `replaymod` identifier are retained for compatibility. Forge shows one AgenticReplay mod entry.
+GPL-3.0-or-later; upstream credits and the internal `replaymod` identifier are retained for compatibility. Each loader shows one AgenticReplay mod entry.
 
 ## Live player control (0.5.0, API v3)
 
@@ -300,3 +326,54 @@ Manage recordings with `replay.list/open/close`, `playback.seek/set`, `camera.se
 `path.keyframe/play/preview/save/load`, and `render.start/status/pause/cancel`.
 Camera times are milliseconds. Player and actor script durations are ticks.
 Call `status` for recording, cast, player, capture, render and path state.
+
+
+## Port validation
+
+CI builds and tests every module and checks the NeoForge JAR for complete mixin
+classes, one mod identity and accidental copies of Minecraft's libraries.
+`python scripts/check_mod_jar.py <neoforge-jar>` runs the same packaging check locally.
+
+The `portSmokeClient` and `portSmokeServer` development run configurations use
+isolated folders under `neoforge-26.1.2/run`. The client uses loopback port 18766
+and the explicitly named development token in its run configuration. Do not use
+that token for ordinary sessions. With a disposable creative test server on
+`127.0.0.1:25587`, run `python scripts/native_smoke26.py` to exercise native player
+input, two independently scripted actors, framebuffer capture, unattended recording
+finalization, reopening, replay seeking, clean screenshots and a 10-frame FFmpeg
+export. The smoke test checks for rendered terrain/actors and a usable client
+after export. Use a flat world for its scene-pixel assertions. Evidence is saved under
+`neoforge-26.1.2/build/native-smoke`.
+
+On 26.1.2, equipment `nbt` accepts a native bracketed item-component suffix; a
+legacy compound is retained as `minecraft:custom_data`. Legacy enchantment/display
+NBT fields are not automatically translated into modern item components.
+For hidden startup without the early splash taking focus, disable NeoForge's early
+loading window in that development instance's `config/fml.toml`.
+
+### Continuous cinematic motion (Forge 1.20.1 and NeoForge 26.1.2)
+
+`render.start` optionally accepts `entityTracks`: up to 16 tracks and 512 total poses.
+Each track contains `entityId` and at least two `poses`, each with numeric
+`time`, `x`, `y`, `z`, `yaw`, `pitch`. Times are strictly increasing **output
+milliseconds**, independent of replay-time keyframes. Positions interpolate linearly
+and yaw takes the shortest turn; endpoints hold outside the supplied interval.
+Every exported frame samples the track after packet processing and simulation,
+including frames between game ticks. Spectator POV uses that same entity pose.
+
+This is explicit cinematic reconstruction for uneven recordings, not automatic
+recovery of missing movement or a claim of original gameplay timing. Supply a
+continuous trajectory and use the same trajectory for following camera keyframes.
+Existing exports are unchanged when omitted. Overrides are restored before the
+next simulation update and when export ends or is cancelled. Missing entities
+fail the render instead of silently producing broken tracking. Source replay files
+are never rewritten.
+
+```json
+{"method":"render.start","params":{"name":"smooth.mp4","width":1080,"height":1920,"fps":60,"entityTracks":[{"entityId":731,"poses":[{"time":0,"x":627,"y":2130,"z":116.5,"yaw":-90,"pitch":78},{"time":28000,"x":627,"y":63,"z":116.5,"yaw":-90,"pitch":78}]}]}}
+```
+
+Forge 1.20.1 `client.graphics` reads or sets `clouds`, `dhEnabled`, `shadersEnabled` (booleans)
+and `dhDistance` (integer 16..256) through native optional DH/Iris/Oculus APIs.
+It is unavailable during path playback/export. Read back actual settings before
+filming; enabled flags alone do not prove a shader compiled successfully.

@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.7.1
+
+- Add optional per-frame cinematic entity motion tracks to both export engines, independent of uneven replay packet timing. Restore overridden poses before simulation and at export exit.
+- Preserve Forge native DH/Oculus filming controls through bounded optional public APIs.
+
+## 0.7.0
+
+- Preserve the 26.1.2 GUI extraction lifecycle while suppressing export overlays. This fixes black shader exports observed with Iris, Sodium and Complementary in the private filming client.
+- Use the runtime commons-codec instead of the old embedded copy, avoiding Sodium's Hex.decodeHex linkage failure.
+- Add current-frame capture and actual render-camera diagnostics to the 26.1.2 API.
+- Add a standalone NeoForge 26.1.2 client port with the authenticated API, player controls, scripted actors, recording, replay, camera paths and export adapters.
+- Consolidate the workspace into `common`, `forge-1.20.1` and `neoforge-26.1.2`, with targeted builds and a CI matrix.
+- Share transport validation, action planners, actor timelines and replay camera-budget state across versions.
+- Adapt actor profiles, skins, typed custom payloads, entity packets and framebuffer readback to 26.1.2.
+- Preserve exact actor frames during normal playback, Quick Mode seeks and marker cut/split processing.
+- Pin a protocol-775-compatible ReplayStudio distribution with checksum-verified reproduction; keep Minecraft's Guava, Gson, Netty and LWJGL libraries authoritative.
+- Fix unattended recording publication, queued replay lighting/chunk compilation, screenshot frame timing and export framebuffer restoration.
+- Keep the Forge 1.20.1 feature set and regression suite in its own module.
+
 ## 0.6.0
 
 - Preserve actor movement/turning timing and instantaneous teleports in playback with exact actor frames alongside indexed vanilla packets.
