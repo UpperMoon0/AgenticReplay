@@ -1,106 +1,23 @@
-plugins {
-    id 'dev.architectury.loom' version '1.4-SNAPSHOT'
-    id 'maven-publish'
-    id "com.github.johnrengelman.shadow" version "8.1.1"
+plugins { id 'base' }
+allprojects {
+    group = 'com.replaymod'
+    version = rootProject.mod_version
+    repositories { mavenCentral() }
 }
+tasks.register('buildAll') { dependsOn subprojects.collect { "${it.path}:build" } }
+tasks.register('testAllVersions') { dependsOn subprojects.collect { "${it.path}:test" } }
 
-version = project.mod_version
-group = project.maven_group
-
-sourceCompatibility = JavaVersion.VERSION_17
-targetCompatibility = JavaVersion.VERSION_17
-
-loom {
-    runs {
-        it.configureEach {
-            vmArgs("-Xmx8G", "-XX:+UseZGC")
+// Older engine branches have incompatible Loom/RFG plugin versions. Evaluate
+// each in its own build, with its own Minecraft/version properties.
+def standaloneLanes = ['legacy-1.7.10', 'forge-1.18.2', 'forge-1.19.2',
+                       'neoforge-1.20.6', 'neoforge-1.21.1', 'neoforge-1.21.8']
+standaloneLanes.each { lane ->
+    ['build', 'test'].each { action ->
+        def taskName = "${action}-${lane}"
+        tasks.register(taskName, GradleBuild) {
+            dir = file(lane)
+            tasks = [action]
         }
+        tasks.named(action == 'build' ? 'buildAll' : 'testAllVersions') { dependsOn taskName }
     }
-
-    silentMojangMappingsLicense()
-}
-
-configurations {
-    bundle {
-        // bundle command, to copy jar contents with the shadow plugin
-        canBeResolved = true
-        canBeConsumed = false
-    }
-}
-
-processResources {
-    inputs.property "version", project.version
-    archivesBaseName = "reforgedplaymod-${project.minecraft_version}"
-    filesMatching("META-INF/mods.toml") {
-        expand "version": project.version
-    }
-}
-
-repositories {
-    flatDir {
-        dirs 'libs'
-    }
-    maven {
-        name = "Modrinth"
-        url = "https://api.modrinth.com/maven"
-        content {
-            includeGroup "maven.modrinth"
-        }
-    }
-    maven { url "https://maven.neoforged.net" }
-    maven { url "https://jitpack.io" }
-
-}
-
-shadowJar {
-    configurations = [
-            project.configurations.bundle
-    ]
-    archiveClassifier.set("dev-shadow")
-}
-
-remapJar {
-    input.set shadowJar.archiveFile
-    dependsOn shadowJar
-}
-
-dependencies {
-
-    mappings loom.layered() {
-        it.mappings("net.fabricmc:yarn:${project.yarn_mappings}:v2")
-        it.mappings file("mappings/yarnpatch.tiny")
-    }
-    // To change the versions see the gradle.properties file
-    minecraft "com.mojang:minecraft:${project.minecraft_version}"
-    //mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
-    neoForge "net.neoforged:neoforge:${project.neoforge_version}"
-
-    bundle("com.github.ReplayMod:ReplayStudio:d9f7c11-slim")
-    minecraftRuntimeLibraries(implementation("com.github.ReplayMod:ReplayStudio:d9f7c11"))
-    include(implementation("com.github.viaversion:opennbt:0a02214"))
-    include(implementation("com.github.ReplayMod:lwjgl-utils:27dcd66"))
-    minecraftRuntimeLibraries("com.github.ReplayMod:lwjgl-utils:27dcd66")
-    include(implementation("com.github.javagl.JglTF:jgltf-model:3af6de4"))
-    include(implementation("com.github.ReplayMod.JavaBlend:2.79.0:a0696f8"))
-    include(implementation("org.aspectj:aspectjrt:1.8.2"))
-    include(implementation("org.lwjgl:lwjgl-tinyexr:3.3.1"))
-    bundle("org.lwjgl:lwjgl-tinyexr:3.3.1:natives-windows") {
-        transitive = false
-    }
-    bundle("org.lwjgl:lwjgl-tinyexr:3.3.1:natives-linux") {
-        transitive = false
-    }
-    bundle("org.lwjgl:lwjgl-tinyexr:3.3.1:natives-macos") {
-        transitive = false
-    }
-    include(implementation('com.googlecode.mp4parser:isoparser:1.1.7'))
-    include(implementation('org.apache.commons:commons-exec:1.3'))
-    include(implementation('com.google.apis:google-api-services-youtube:v3-rev178-1.22.0'))
-    include(implementation('com.google.api-client:google-api-client-gson:1.20.0'))
-    include(implementation('com.google.api-client:google-api-client-java6:1.20.0'))
-    include(implementation('com.google.oauth-client:google-oauth-client-jetty:1.20.0'))
-
-    modCompileOnly("maven.modrinth:iris:1.6.17+1.20.4")
-
-    testImplementation 'junit:junit:4.11'
 }

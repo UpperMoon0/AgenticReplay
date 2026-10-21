@@ -1,0 +1,7 @@
+{
+  "required": true,
+  "package": "com.replaymod.core.mixin",
+  "compatibilityLevel": "JAVA_25",
+  "client": ["ActorPlayerAccessor", "ActorEntityAccessor", "MixinActorDefaultSkin", "MixinActorReplayMovement", "MixinActorReplayPayload", "MixinAgentReplayViewDistance", "MixinAgentBackgroundWindow"],
+  "injectors": {"defaultRequire": 1}
+}

@@ -25,3 +25,20 @@ run-data
 
 repo
 /logs
+
+/integration-*.log
+/*-review.log
+/mc1201-*.log
+__pycache__/
+*.pyc
+
+/port-*.log
+
+/.refs/
+
+/neoforge-26.1.2/libs/ReplayStudio-master-SNAPSHOT*.jar
+
+# Runtime logs remain local in every loader module.
+**/logs/
+
+/legacy-1.7.10/libs/

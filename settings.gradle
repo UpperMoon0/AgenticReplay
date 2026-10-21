@@ -1,17 +1,17 @@
 pluginManagement {
     repositories {
-        mavenLocal()
         gradlePluginPortal()
-        maven { url = 'https://maven.neoforged.net/releases' }
-        maven { url "https://maven.architectury.dev/" }
-        maven {
-            name = 'Fabric'
-            url = 'https://maven.fabricmc.net/'
-        }
-        maven { url "https://jitpack.io" }
+        maven { url 'https://maven.neoforged.net/releases' }
+        maven { url 'https://maven.architectury.dev/' }
+        maven { url 'https://maven.fabricmc.net/' }
     }
 }
-
-plugins {
-    id 'org.gradle.toolchains.foojay-resolver-convention' version '0.8.0'
-}
+plugins { id 'org.gradle.toolchains.foojay-resolver-convention' version '0.9.0' }
+rootProject.name = 'agenticreplay'
+include 'api-common', 'common'
+def lanes = ['forge-1.20.1', 'neoforge-26.1.2']
+def tasks = gradle.startParameter.taskNames
+def targeted = tasks.findAll { it.startsWith(':') }.collect { it.split(':')[1] }.findAll { it in lanes }.toSet()
+def whole = tasks.isEmpty() || tasks.any { !it.startsWith(':') }
+(whole ? lanes : targeted).each { include it }
+gradle.ext.mcVersionMapping = [':common': 'shared', ':forge-1.20.1': '1.20.1', ':neoforge-26.1.2': '26.1.2']
