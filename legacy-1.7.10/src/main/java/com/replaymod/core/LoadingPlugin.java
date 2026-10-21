@@ -40,9 +40,14 @@ public final class LoadingPlugin implements IFMLLoadingPlugin {
         String tracker = "com.replaymod.core.asm.GLStateTrackerTransformer";
         String recorder = "com.replaymod.core.asm.RecordingOrderTransformer";
         String angelica = "com.replaymod.core.asm.AngelicaReplayTransformer";
+        String bootstrap = "com.replaymod.core.asm.ReplayBootstrapTransformer";
+        String missingEntity = "com.replaymod.core.asm.ReplayMissingEntityTransformer";
+        String shaderClock = "com.replaymod.core.asm.AngelicaShaderClockTransformer";
+        String senderDrain = "com.replaymod.core.asm.ReplaySenderDrainTransformer";
+        String fmlChannel = "com.replaymod.core.asm.ReplayFmlChannelTransformer";
         return Boolean.getBoolean("replaymod.glerrors")
-                ? new String[] {"com.replaymod.core.asm.GLErrorTransformer", tracker, recorder, angelica}
-                : new String[] {tracker, recorder, angelica};
+                ? new String[] {"com.replaymod.core.asm.GLErrorTransformer", tracker, recorder, angelica, bootstrap, missingEntity, shaderClock, senderDrain, fmlChannel}
+                : new String[] {tracker, recorder, angelica, bootstrap, missingEntity, shaderClock, senderDrain, fmlChannel};
     }
 
     @Override public void injectData(Map<String, Object> data) {

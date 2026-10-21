@@ -18,7 +18,8 @@ public class LegacyRenderCompatibilityTest {
         assertFalse(result.get("shaderExportVerified").getAsBoolean());
         assertEquals("2.2.28", result.get("angelicaVersion").getAsString());
         assertEquals(5, result.getAsJsonArray("warnings").size());
-        assertTrue(result.toString().contains("wall clock"));
+        assertTrue(result.toString().contains("exported frame time"));
+        assertTrue(result.get("angelicaShaderClockAvailable").getAsBoolean());
         assertTrue(result.get("angelicaTerrainBarrierAvailable").getAsBoolean());
         assertTrue(result.toString().contains("graph, build and upload"));
         assertTrue(result.toString().contains("first-person hand"));
@@ -29,6 +30,7 @@ public class LegacyRenderCompatibilityTest {
         assertEquals("2.2.28", result.get("angelicaSourceInspectedVersion").getAsString());
         assertFalse(result.get("shaderExportVerified").getAsBoolean());
         assertFalse(result.get("angelicaTerrainBarrierAvailable").getAsBoolean());
+        assertFalse(result.get("angelicaShaderClockAvailable").getAsBoolean());
         assertTrue(result.toString().contains("separate validation"));
     }
 }

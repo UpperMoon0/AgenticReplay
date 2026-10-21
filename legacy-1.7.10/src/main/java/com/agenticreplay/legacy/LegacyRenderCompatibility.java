@@ -21,12 +21,15 @@ final class LegacyRenderCompatibility {
         result.addProperty("shaderExportVerified", false);
         result.addProperty("angelicaLoaded", angelicaVersion != null);
         result.addProperty("angelicaTerrainBarrierAvailable", "2.2.28".equals(angelicaVersion));
+        result.addProperty("angelicaShaderClockAvailable", "2.2.28".equals(angelicaVersion));
         JsonArray warnings = new JsonArray();
         warnings.add(new JsonPrimitive("Graphical recording, replay and export require profile-specific validation; build success is not runtime certification."));
         if (angelicaVersion != null) {
             result.addProperty("angelicaVersion", angelicaVersion);
             result.addProperty("angelicaSourceInspectedVersion", "2.2.28");
-            warnings.add(new JsonPrimitive("Angelica 2.2.28 shader animation uses a wall clock that ReplayMod 2.5.2 does not synchronize to export time."));
+            warnings.add(new JsonPrimitive("2.2.28".equals(angelicaVersion)
+                    ? "The fork synchronizes Angelica 2.2.28 shader animation to exported frame time; individual shader packs still require visual validation."
+                    : "This Angelica version has no validated shader clock integration; shader animation may follow wall clock time."));
             warnings.add(new JsonPrimitive("2.2.28".equals(angelicaVersion)
                     ? "The fork waits for Angelica 2.2.28 terrain graph, build and upload work; shader-pack and other render-mode validation remains required."
                     : "This Angelica version has no validated terrain barrier; incomplete terrain during export is possible."));

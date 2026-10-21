@@ -16,6 +16,7 @@ public final class LegacyLifecycle {
     @SubscribeEvent
     public void renderTick(TickEvent.RenderTickEvent event) {
         if (event.phase == TickEvent.Phase.START) {
+            com.replaymod.replay.ReplayPacketPump.drain();
             queue.drain();
             replay.restoreClosedReplayOptions();
         }
