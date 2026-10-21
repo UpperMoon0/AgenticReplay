@@ -97,8 +97,8 @@ verifier, and executable GL/tracker fixtures, including idempotence and stack
 growth with live operands. None of these is a native runtime certification.
 
 Native validation results are recorded in `ENGINE_RUNTIME_VALIDATION.md`.
-Until those checks are populated, startup and recording/finalize/reopen/seek/
-playback/export remain unverified for this change. Legacy shader export and the
+The isolated GTNH client completed startup with 325 mods; recording/finalize/
+reopen/seek/playback/export remain unverified for this change. Legacy shader export and the
 UI-only 1.21.1 lane need explicit graphical acceptance; API parity is not assumed.
 Issue #6 remains open for the complete historical source-build gate, unresolved
 library source provenance and any outstanding native acceptance.

@@ -16,5 +16,9 @@ build and mapping inputs, licenses and both submodules:
 All original JAR notices are preserved. The original multi-version source uses
 GPL-3.0-or-later and its historical preprocessing build; it is reference source,
 not a claim that that old toolchain builds today. A direct local attempt failed
-to resolve the pinned preprocessor plugin `24ac087`. The maintained fork/build
-migration is issue #6; this integration still builds a separate adapter.
+to resolve the pinned preprocessor plugin `24ac087`. Rebuilding that plugin
+then exposed retired MCPBot metadata and further historical ForgeGradle inputs.
+The maintained fork compiles its compatibility replacements and adapter from
+source and combines them with this verified base into one runtime JAR. A full
+historical source rebuild remains an issue #6 gate; see
+[the build design](../../docs/ENGINE_FORK_DESIGN.md).
