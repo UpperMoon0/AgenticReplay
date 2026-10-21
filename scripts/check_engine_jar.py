@@ -73,8 +73,10 @@ def check(lane, path):
             assert CAMERA_LIBS <= entries, f'Camera export runtime is incomplete: {CAMERA_LIBS - entries}'
             name = 'META-INF/mods.toml' if lane == 'forge-1.20.1' else 'META-INF/neoforge.mods.toml'
             info = tomllib.loads(archive.read(name).decode())
-            identity = 'reforgedplaymod' if lane == 'neoforge-1.21.1' else 'replaymod'
-            assert [mod['modId'] for mod in info['mods']] == [identity]
+            # ReForgedPlay retains both its loader entry point and the ReplayMod
+            # compatibility identity in the original upstream descriptor.
+            identities = ['reforgedplaymod', 'replaymod'] if lane == 'neoforge-1.21.1' else ['replaymod']
+            assert [mod['modId'] for mod in info['mods']] == identities
             assert info['mods'][0]['displayName'] == 'AgenticReplay'
             assert '${' not in info['mods'][0]['version']
             configs = [m['config'] for m in info.get('mixins', [])]
