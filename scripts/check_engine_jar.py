@@ -51,6 +51,7 @@ def check(lane, path):
             assert attributes['AgenticReplay-Launch-Profile'] == 'unimixins'
             assert attributes['AgenticReplay-Engine-Build'] == 'source-overlay-v1'
             assert attributes['FMLCorePlugin'] == 'com.replaymod.core.LoadingPlugin'
+            assert not any((n.startswith('org/spongepowered/') and n.endswith('.class')) or n.startswith('META-INF/services/org.spongepowered.') for n in names), 'UniMixins must own the Mixin runtime'
             assert 'com/agenticreplay/legacy/AgenticReplayLegacy.class' in entries
             info = json.loads(archive.read('mcmod.info'))
             ids = [mod['modid'] for mod in info]
@@ -61,9 +62,9 @@ def check(lane, path):
             assert b'notify_glEnable' in tracker and b'notify_glDisable' in tracker
             seed = Path(__file__).resolve().parents[1] / 'legacy-1.7.10/engine-inputs/replaymod-1.7.10-2.5.2.jar'
             with zipfile.ZipFile(seed) as upstream:
-                replacement_families = ('com/replaymod/core/asm/GLStateTrackerTransformer', 'com/replaymod/render/hooks/GLStateTracker')
+                replacement_families = ('com/replaymod/core/asm/GLStateTrackerTransformer', 'com/replaymod/render/hooks/GLStateTracker', 'com/replaymod/core/LoadingPlugin')
                 for name in upstream.namelist():
-                    if name.endswith('/') or name in {'META-INF/MANIFEST.MF', 'mcmod.info'} or name.startswith(replacement_families):
+                    if name.endswith('/') or name in {'META-INF/MANIFEST.MF', 'mcmod.info', 'META-INF/services/javax.annotation.processing.Processor'} or name.startswith(replacement_families + ('META-INF/services/org.spongepowered.',)) or (name.startswith('org/spongepowered/') and name.endswith('.class')):
                         continue
                     assert archive.read(name) == upstream.read(name), f'Unexpected upstream change: {name}'
             for name in names:

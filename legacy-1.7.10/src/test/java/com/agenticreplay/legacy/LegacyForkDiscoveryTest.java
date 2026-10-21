@@ -7,6 +7,8 @@ import cpw.mods.fml.common.ModContainer;
 import cpw.mods.fml.common.ModContainerFactory;
 import cpw.mods.fml.common.MetadataCollection;
 import org.junit.Test;
+import org.objectweb.asm.*;
+import org.objectweb.asm.tree.*;
 import java.io.*;
 import java.nio.file.*;
 import java.util.*;
@@ -14,6 +16,55 @@ import java.util.jar.*;
 import static org.junit.Assert.*;
 
 public class LegacyForkDiscoveryTest {
+    @Test public void corePluginDefersAllOriginalConfigurationsUntilInjectData() throws Exception {
+        try (JarFile jar = new JarFile(System.getProperty("agenticreplay.distributable"));
+             JarFile original = new JarFile("engine-inputs/replaymod-1.7.10-2.5.2.jar")) {
+            String entry = "com/replaymod/core/LoadingPlugin.class";
+            ClassNode plugin = new ClassNode(Opcodes.ASM5);
+            ClassNode upstream = new ClassNode(Opcodes.ASM5);
+            new ClassReader(jar.getInputStream(jar.getEntry(entry))).accept(plugin, 0);
+            new ClassReader(original.getInputStream(original.getEntry(entry))).accept(upstream, 0);
+            assertEquals(configurations(upstream), configurations(plugin));
+            assertEquals(8, configurations(plugin).size());
+            boolean registersLater = false;
+            for (MethodNode method : plugin.methods) for (AbstractInsnNode instruction : method.instructions.toArray()) {
+                if (!(instruction instanceof MethodInsnNode)) continue;
+                MethodInsnNode call = (MethodInsnNode) instruction;
+                assertNotEquals("Core plugin must not bootstrap a second Mixin loader",
+                        "org/spongepowered/asm/launch/MixinBootstrap", call.owner);
+                if ("<init>".equals(method.name)) assertFalse(call.owner.startsWith("org/spongepowered/"));
+                if ("injectData".equals(method.name) && "org/spongepowered/asm/mixin/Mixins".equals(call.owner)
+                        && "addConfiguration".equals(call.name)) registersLater = true;
+            }
+            assertTrue(registersLater);
+        }
+    }
+
+    private static Set<String> configurations(ClassNode type) {
+        Set<String> result = new TreeSet<>();
+        for (MethodNode method : type.methods) for (AbstractInsnNode instruction : method.instructions.toArray()) {
+            if (instruction instanceof LdcInsnNode && ((LdcInsnNode) instruction).cst instanceof String) {
+                String value = (String) ((LdcInsnNode) instruction).cst;
+                if (value.startsWith("mixins.") && value.endsWith(".json")) result.add(value);
+            }
+        }
+        return result;
+    }
+
+    @Test public void unimixinsIsTheOnlyMixinRuntimeProvider() throws Exception {
+        try (JarFile jar = new JarFile(System.getProperty("agenticreplay.distributable"))) {
+            Enumeration<JarEntry> entries = jar.entries();
+            while (entries.hasMoreElements()) {
+                String name = entries.nextElement().getName();
+                assertFalse(name, name.startsWith("org/spongepowered/") && name.endsWith(".class"));
+                assertFalse(name, name.startsWith("META-INF/services/org.spongepowered."));
+            }
+            assertNull(jar.getEntry("META-INF/services/javax.annotation.processing.Processor"));
+            assertNotNull(jar.getEntry("mixins.core.replaymod.json"));
+            assertNotNull(jar.getEntry("com/replaymod/core/LoadingPlugin.class"));
+        }
+    }
+
     @Test public void actualFMLParserFindsBothModsInTheSingleArtifact() throws Exception {
         // The real launcher sets this package-private field before discovery.
         java.lang.reflect.Field side = cpw.mods.fml.relauncher.FMLRelaunchLog.class.getDeclaredField("side");

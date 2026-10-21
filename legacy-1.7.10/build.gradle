@@ -87,6 +87,7 @@ tasks.named('jar', org.gradle.jvm.tasks.Jar) { destinationDirectory = layout.bui
 
 def forkJar = tasks.register('forkJar', org.gradle.jvm.tasks.Jar) {
     dependsOn tasks.named('reobfJar')
+    inputs.property 'bootstrapPolicy', 'unimixins-inject-data-v3'
     archiveClassifier = ''
     preserveFileTimestamps = false
     reproducibleFileOrder = true
@@ -97,8 +98,13 @@ def forkJar = tasks.register('forkJar', org.gradle.jvm.tasks.Jar) {
     }
     from({ zipTree(compileReplayMod) }) {
         exclude 'META-INF/MANIFEST.MF', 'mcmod.info'
+        // UniMixins owns bootstrap for this launch profile. Mixing its service
+        // with the historical bundled Mixin produces loader-constraint errors.
+        exclude 'org/spongepowered/**/*.class', 'META-INF/services/org.spongepowered.*'
+        exclude 'META-INF/services/javax.annotation.processing.Processor'
         exclude 'com/replaymod/core/asm/GLStateTrackerTransformer*.class'
         exclude 'com/replaymod/render/hooks/GLStateTracker*.class'
+        exclude 'com/replaymod/core/LoadingPlugin*.class'
     }
     manifest {
         attributes('FMLCorePlugin': 'com.replaymod.core.LoadingPlugin',
@@ -117,4 +123,18 @@ tasks.named('test') {
 tasks.named('sourcesJar', org.gradle.jvm.tasks.Jar) {
     from(project.file('engine-inputs/source')) { into 'upstream'; exclude 'docs/**' }
     from(project.files('build.gradle', 'settings.gradle', 'scripts')) { into 'build-inputs' }
+}
+
+// Explicit native acceptance tooling is a separate mod, never a production input.
+sourceSets {
+    nativeTest {
+        compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
+        runtimeClasspath += compileClasspath
+    }
+}
+tasks.register('nativeProbeJar', org.gradle.jvm.tasks.Jar) {
+    dependsOn tasks.named('nativeTestClasses')
+    from sourceSets.nativeTest.output
+    archiveClassifier = 'native-probe-dev'
+    destinationDirectory = layout.buildDirectory.dir('native-tools')
 }

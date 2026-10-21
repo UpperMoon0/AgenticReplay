@@ -68,8 +68,9 @@ declared supported. The binary-backed legacy build must not be described as full
   tracking notifications and recomputes maximum stack sizes.
 - UniMixins 0.3.1, commit `c47090bcae511563f2999ddff3317edc6f23364d`, supplies
   bootstrap for the supported legacy profile. This launch change is not applied
-  to modern artifacts. Existing embedded upstream classes are retained, and
-  installed UniMixins remains required.
+  to modern artifacts. The fork removes embedded Mixin runtime classes/providers and defers all eight
+  engine configurations to injectData, after UniMixins initialization. Package
+  documentation and license notices are retained. Installed UniMixins is required.
 - Angelica 2.2.28 source is `0a4d48964edc7a20c0a93c456123860a4a9e16de`.
   Its shader-clock/terrain/hand integration limits remain documented in
   [SHADER_WORKFLOW.md](SHADER_WORKFLOW.md). No other mod JAR is patched.
@@ -99,7 +100,8 @@ growth with live operands. None of these is a native runtime certification.
 
 Native validation results are recorded in `ENGINE_RUNTIME_VALIDATION.md`.
 The isolated GTNH client completed startup with 325 mods; recording/finalize/
-reopen/seek/playback/export remain unverified for this change. Legacy shader export and the
+reopen/seek/playback/export passed in the separate minimal Angelica fixture.
+The final full-GTNH artifact still needs a repeat run. Legacy shader export and the
 UI-only 1.21.1 lane need explicit graphical acceptance; API parity is not assumed.
 Issue #6 remains open for the complete historical source-build gate and
 any outstanding native acceptance.
