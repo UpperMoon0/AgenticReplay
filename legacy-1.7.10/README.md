@@ -1,67 +1,73 @@
-# AgenticReplay for Forge 1.7.10
+# AgenticReplay for Forge 1.7.10 and UniMixins
 
-This Java 8 client adapter provides AgenticReplay's authenticated loopback API over the **official ReplayMod 1.7.10-2.5.2 engine**. Install both jars. It does not replace the existing Forge 1.20.1 engine or its features. The historical engine already supplies actual packet recording, `.mcpr` replay playback, free camera, path editing and video rendering through its original UI.
+Install **one** `agenticreplay-1.7.10-0.8.0.jar`, with Forge 10.13.4.1614 and
+UniMixins 0.3.1 or later. Remove the old `agenticreplay-1.7.10-0.7.x.jar` adapter
+and the separately installed `replaymod-1.7.10-2.5.2.jar` first. Keep GTNH's
+Galacticraft and Angelica. Do not add OptiFine beside Angelica.
 
-This target is a capability-limited port, not API parity with 1.20.1. Query `capabilities` before sending commands. There is no remote render/export, remote path editing, scripted actor injection, native capture, held movement or player-sequence API yet. The original ReplayMod UI remains available for path editing and FFmpeg export. Existing modern replay files cannot be converted into the 1.7.10 packet protocol by this adapter.
+The artifact contains the maintained ReplayMod 2.5.2 engine fork, its original
+recording/replay/camera/path/render UI, and the Java 8 agent adapter. The internal
+`replaymod` ID/version and module IDs are retained for engine compatibility.
+The agent reports version 0.8.0 and an `engineBuild` object in capabilities/status.
+Do not install this client artifact on a dedicated server.
 
-Shared HTTP/security, filename safety and JSON validation live in [api-common](../api-common/README.md), compiled from the same files as the modern version. Minecraft/ReplayMod engine adapters remain version-specific. For the shader workflow, see [record without shaders, export with shaders](../docs/SHADER_WORKFLOW.md).
-
-## Build
-
-From the repository root:
+## Build and ownership
 
 ```sh
 python3 legacy-1.7.10/scripts/prepare_replaymod.py
 ./gradlew -p legacy-1.7.10 build
+python3 scripts/check_engine_jar.py legacy-1.7.10 legacy-1.7.10/build/libs/agenticreplay-1.7.10-0.8.0.jar
 ```
 
-Gradle 8.14 runs on Java 17 or 21; the mod compiles and tests with a provisioned Java 8 toolchain. RetroFuturaGradle 1.4.9 uses Forge 10.13.4.1614 and MCP `stable_12`. The engine was built for Forge 10.13.4.1558; runtime compatibility with a particular modpack still needs testing. The separate project deliberately does not evaluate the modern Loom build. Both game artifacts take the root version from the root version property; the legacy FML annotation is generated from that same value.
+Gradle 8.14 runs on Java 21; RetroFuturaGradle 1.4.9 compiles the adapter and
+engine compatibility replacements using Java 8/MCP stable-12. Runtime output
+is in `build/libs`; internal adapter/development inputs are in
+`build/engine-inputs` and must not be installed separately. The sources JAR
+contains the replacement/adapter/shared source, corresponding upstream source
+and build inputs. The repository retains the complete original source snapshot.
 
-The preparation script downloads the official engine from replaymod.com and verifies SHA-256 `e8b0379ed3b03b3028145c71962aa141757844f2eb7b82ce5390a9cee5a8ce96`. The official archive contains a duplicate `assets/` directory record. The preparation script creates a separate compile-only ZIP without directory records; Gradle verifies that every class/resource byte exactly matches the hash-pinned original before deobfuscation. The official runtime jar remains untouched. It is never shaded into the adapter. Output is `legacy-1.7.10/build/libs/agenticreplay-1.7.10-<version>.jar`; use the reobfuscated main jar, not the sources/dev jars. CI uploads build output and test reports without publishing a release.
+This is a **binary-backed source-overlay fork**, not a claim that every
+historical engine class is recompiled. The unchanged official base is SHA-256
+`e8b0379ed3b03b3028145c71962aa141757844f2eb7b82ce5390a9cee5a8ce96`;
+the preparation script verifies it and its normalized compile archive. Source
+replacements are compiled/reobfuscated here and replace their whole original
+class families during deterministic assembly. No user edits or external engine
+download is needed. See [the design and remaining source-build gate](../docs/ENGINE_FORK_DESIGN.md).
 
-## Run
+The launch profile deliberately uses UniMixins bootstrap. It removes the old
+ReplayMod cascaded tweaker and forces normal FML mod discovery. This change is
+confined to the legacy artifact. The GL transformer keeps actual GL calls in
+place, invokes them once, notifies state tracking afterward and recomputes stack
+sizes, preserving Galacticraft's required injection target.
 
-Use a Java 8 graphical Forge 1.7.10 client, with the adapter and official `replaymod-1.7.10-2.5.2.jar` in `mods`. Do not install either on a dedicated server. Add:
+## Agent controls and limits
 
-```text
--Dagenticreplay.token=<random-token-of-at-least-32-characters>
--Dagenticreplay.port=8766
-```
+Use JVM properties `-Dagenticreplay.token=<at-least-32-random-characters>` and
+`-Dagenticreplay.port=8766`. The API is opt-in and authenticated on IPv4 loopback.
+Query `capabilities` before sending commands. Existing recording controls,
+finalization, replay files/open/close, seek/speed, camera, marker, connection and
+basic live-player controls remain available.
 
-With no token the API stays disabled. It binds only to `127.0.0.1`. POST JSON to `/rpc` with `Authorization: Bearer <token>`. The request/response envelope matches the modern API: `{"method":"status","params":{}}` returns `{"ok":true,"result":...}`. Inputs are capped at 64 KiB. Client work uses a bounded render-tick queue, including while replay time is paused. It never holds a queue lock while calling the engine, avoiding legacy sender/queue lock inversion during seeks. Additional seeks and camera pose/spectator changes are rejected until `status.seekInProgress` becomes false. A 30-second timeout cancels work that has not started; already-started work has an uncertain result, so inspect state before retrying.
+Remote path editing/export, scripted actors, native capture, held movement and
+player sequences remain unavailable. Use the retained ReplayMod UI for path
+editing/rendering. Recording must be armed before connection; pause/stop use
+cut/split markers, and disconnect finalizes asynchronously. Poll `replay.list`
+for the saved file. Replays remain tied to the 1.7.10 packet protocol.
 
-Supported methods:
+Build/bytecode tests do not establish graphical compatibility. Shader export,
+terrain completion and free-camera hand rendering require their own validation;
+the [pinned Angelica findings and test procedure](../docs/SHADER_WORKFLOW.md)
+remain applicable. Runtime results are recorded separately in the engine audit.
 
-- `capabilities`, `status`
-- `client.connect` (`address`, optional `recording`, default true), `client.disconnect`, `client.background` (`enabled`, or explicit `pauseOnLostFocus`; window hiding unsupported)
-- `player.state`, `player.look` (immediate `yaw`, `pitch`), `player.select` (`slot` 0..8), `player.screen.close`
-- `replay.list/open/close/rename/delete`
-- `recording.set/marker`
-- `playback.set/seek`
-- `camera.set/options/spectate`, `entities.list`
-- `markers.list/set`
+## Sources and notices
 
-Start recording before connection; missing login/chunk packets cannot be recovered afterward. Pause/resume/stop operate the actual legacy recording controls and cut/split markers. Disconnect finalizes capture asynchronously; poll `replay.list` until the file appears. The rename dialog is disabled for API-armed recordings. Server-required client mods must be installed; Forge handshake/network processing is owned by the historical engine, not replaced by synthetic packet stubs.
+ReplayMod source base: `ff47174fd6e94c051eaf6c0a0f3f4745a6b0e885` (2.5.2), with
+jGui `6641836321f4583e6f56d8ceb59da452213396e7` and translations
+`63b7a8bea1ab9a9f005c9ae0e1c54b4432cbc9e6`. Original build/source/notices live
+in `engine-inputs`. Legacy-specific source is GPL-3.0-or-later; the shared
+Java 8 contracts retain their LGPL notice. Bundled third-party notices are
+preserved. New compatibility code does not alter other installed mod JARs.
 
-Replay filenames are constrained to the replay directory; links/traversal are rejected. `replay.delete` moves a closed file into `agenticreplay-trash` for recovery. Replay opening checks mod compatibility unless explicitly allowed. Spectating is restricted to living entities because that is the 1.7.10 engine contract. Rendering and modded replay compatibility need an in-game smoke test; unit/build tests alone cannot establish them.
-
-## GTNH and Angelica
-
-Keep the modpack’s Angelica installation; do not add OptiFine alongside it. `capabilities.renderCompatibility` and `status.renderCompatibility` report the loaded Angelica version and explicitly leave shader export unverified. Source inspection of GTNH’s listed Angelica 2.2.28 found unsynchronized shader animation time, an ineffective ReplayMod terrain-completion barrier, and a separate hand-render event. These are potential footage defects, not evidence that a tested recording/replay round trip failed. Other versions require their own validation. See [the shader workflow and pinned evidence](../docs/SHADER_WORKFLOW.md) before using this stack for footage. No speculative renderer patches are installed.
-
-## Provenance and licensing
-
-The private user-provided `UpperMoon0/MC-Modding-Src` 1.7.10 tree was inspected for exact vanilla contracts. Its audit identifies community MCP stable-12 names, not Mojang mappings. No decompiled vanilla source, Mojang jar, mappings archive, or private repository content is redistributed here.
-
-The runtime is official [ReplayMod 2.5.2 source](https://github.com/ReplayMod/ReplayMod/tree/ff47174fd6e94c051eaf6c0a0f3f4745a6b0e885), downloaded through the [official downloads page](https://www.replaymod.com/download/). Upstream identifies this as GPL-3.0-or-later. This new adapter module is offered under GPL-3.0-or-later; its license copy is in `LICENSE.md`. The shared common code retains LGPL-3.0 and its separate license notice; the modern target retains its existing LGPL license. Distribution must retain applicable notices and provide corresponding adapter source; the engine remains a separate download under its own terms. The 2.5.2 runtime is historical; this project does not claim ongoing upstream 1.7.10 maintenance.
-
-The bridge uses typed engine APIs except narrowly pinned private UI fields for recording buttons and marker refresh. Those fields are checked at initialization, so incompatible engine changes fail visibly rather than silently losing recording controls.
-
-## Verification record
-
-- Local Java 8 compilation, reobfuscation and full legacy build passed.
-- Twenty-nine JUnit tests passed in the legacy build (including the sixteen shared-contract tests). Transport, render-queue, replay-path and pinned engine ABI tests cover authentication, bounds, timeout cancellation, queue isolation, filename safety four private engine fields, and truthful renderer compatibility reporting.
-- Independent binary linkage review resolved referenced Minecraft/Forge/ReplayMod members against the exact 1.7.10 runtime inputs; adapter bytecode targets Java 8.
-- No graphical Minecraft session has been launched in this environment. No recording/replay round trip, modded-server handshake or rendered export is claimed verified yet.
-
-Required in-game acceptance: install both jars, query capabilities/status, connect with recording enabled, add a marker, disconnect and wait for `.mcpr`, open it, pause/seek/resume, move/spectate the camera, close via both API and UI, verify HUD/FOV restoration, then exercise the original path/export UI. Repeat against the intended modpack before relying on production captures.
+The user's MC-Modding-Src 1.7.10 vanilla implementation and the exact Forge,
+Galacticraft 3.4.34-GTNH, Angelica 2.2.28 and UniMixins 0.3.1 sources were
+inspected. No vanilla/private repository source is redistributed.

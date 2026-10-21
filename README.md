@@ -13,6 +13,8 @@ The workspace follows the same layout as the other multi-version mods:
 | --- | --- | --- |
 | `api-common` | Shared authenticated HTTP transport, validation and file safety | 8 |
 | `common` | Shared modern actor, action and export planners | 17 |
+| `legacy-1.7.10` | UniMixins engine fork and limited agent adapter | 8 |
+| `neoforge-1.21.1` | Source-built replay UI engine; no agent API | 21 |
 | `forge-1.20.1` | Existing Forge replay engine and client adapters | 17 |
 | `neoforge-26.1.2` | Standalone NeoForge replay engine and modern client adapters | 25 |
 
@@ -26,6 +28,12 @@ The 26.1.2 engine is based on ReForgedPlay's 26.1 port and uses a pinned,
 protocol-775-compatible ReplayStudio library; see [library provenance](neoforge-26.1.2/libs/README.md).
 Replays contain Minecraft-version-specific packets. Record and play back with the
 matching client version; the workspace does not convert 1.20.1 recordings to 26.1.2.
+
+Each supported lane ships its replay engine in the AgenticReplay artifact.
+Do not install a separate ReplayMod/ReForgedPlay engine alongside it. Legacy
+users must remove both old adapter/engine JARs and keep UniMixins installed.
+See the [engine ownership, provenance and capability audit](docs/ENGINE_FORK_AUDIT.md),
+[migration design](docs/ENGINE_FORK_DESIGN.md) and [legacy installation](legacy-1.7.10/README.md).
 
 Agent control uses a versioned Java facade and an opt-in authenticated loopback HTTP endpoint. Existing UI remains usable.
 

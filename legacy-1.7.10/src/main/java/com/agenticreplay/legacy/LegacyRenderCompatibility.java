@@ -21,7 +21,7 @@ final class LegacyRenderCompatibility {
         result.addProperty("shaderExportVerified", false);
         result.addProperty("angelicaLoaded", angelicaVersion != null);
         JsonArray warnings = new JsonArray();
-        warnings.add(new JsonPrimitive("Graphical recording, replay and export have not been runtime-validated for this adapter."));
+        warnings.add(new JsonPrimitive("Graphical recording, replay and export require profile-specific validation; build success is not runtime certification."));
         if (angelicaVersion != null) {
             result.addProperty("angelicaVersion", angelicaVersion);
             result.addProperty("angelicaSourceInspectedVersion", "2.2.28");

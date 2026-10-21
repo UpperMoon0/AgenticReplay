@@ -32,7 +32,7 @@ The camera/framebuffer path is more promising, but is still untested: ReplayMod 
 
 `capabilities` and `status` expose `renderCompatibility`: the loaded Angelica version, the reviewed source version when Angelica is detected, unverified-export status, and the known source-level warnings. This is diagnostic information only. It does not change rendering, fix shader timing, wait for terrain workers, suppress Angelica's hand renderer, or certify other Angelica versions.
 
-The 1.7.10 adapter leaves camera-path editing and video export to the original ReplayMod UI. There is no remote shader-toggle or remote export API in this target. No invasive Iris/Celeritas patch has been added without an in-game testable contract.
+The maintained 1.7.10 engine fork retains camera-path editing and video export in the original ReplayMod UI. There is no remote shader-toggle or remote export API in this target. No invasive Iris/Celeritas patch has been added without an in-game testable contract.
 
 ## Conditional workflow and acceptance test
 

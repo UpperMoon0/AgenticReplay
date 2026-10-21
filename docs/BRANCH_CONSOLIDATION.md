@@ -10,7 +10,7 @@ their implementations are absent and they are not build targets.
 | `1.20.1` and `codex/multiversion-26.1.2` | `forge-1.20.1` | Engine, agent API, actors, capture/export |
 | `1.21` (Minecraft 1.21.1) | `neoforge-1.21.1` | Original ReplayMod recording/playback/path/render UI |
 | `codex/multiversion-26.1.2` | `neoforge-26.1.2` | Engine, agent API, actors, capture/export |
-| `feat/forge-1.7.10` merged in `1.20.1` | `legacy-1.7.10` | Limited agent adapter; external engine until issue #6 |
+| `feat/forge-1.7.10` merged in `1.20.1` | `legacy-1.7.10` | Maintained engine fork with limited agent API |
 
 Feature branches already included in `1.20.1` are preserved through that history.
 The local `codex/scripted-actors` branch's 1.20.4 implementation is superseded by
@@ -30,5 +30,5 @@ include every lane. Prepare the pinned legacy dependency with
 `python3 legacy-1.7.10/scripts/prepare_replaymod.py` before building legacy.
 
 Each lane's existing mappings, dependency pins, license, and engine source are
-retained. Installation and engine-ownership changes belong to issue #6, after
-this baseline integration. Existing replays remain tied to their packet version.
+retained. Engine ownership and installation are documented in `ENGINE_FORK_AUDIT.md` and
+`ENGINE_FORK_DESIGN.md`. Existing replays remain tied to their packet version.

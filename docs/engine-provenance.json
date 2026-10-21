@@ -1,0 +1,51 @@
+{
+  "supported": [
+    "legacy-1.7.10",
+    "forge-1.20.1",
+    "neoforge-1.21.1",
+    "neoforge-26.1.2"
+  ],
+  "engines": {
+    "legacy-1.7.10": {
+      "base": "ReplayMod/ReplayMod",
+      "revision": "ff47174fd6e94c051eaf6c0a0f3f4745a6b0e885",
+      "build": "binary-source-overlay",
+      "external_engine": false,
+      "runtime": [
+        "Forge 10.13.4.1614",
+        "UniMixins >=0.3.1"
+      ],
+      "agent_api": "limited"
+    },
+    "forge-1.20.1": {
+      "base": "ferriarnus/ReForgedPlay",
+      "revision": "ce84410677028cef435a20e9470f58bbd2f174bb",
+      "build": "source",
+      "external_engine": false,
+      "runtime": [
+        "Forge >=47.1.3"
+      ],
+      "agent_api": "modern"
+    },
+    "neoforge-1.21.1": {
+      "base": "ferriarnus/ReForgedPlay",
+      "revision": "a8dfcdce1947ac2fb73375d476710a6500b1ada5",
+      "build": "source",
+      "external_engine": false,
+      "runtime": [
+        "NeoForge 21.1.82"
+      ],
+      "agent_api": "none"
+    },
+    "neoforge-26.1.2": {
+      "base": "ferriarnus/ReForgedPlay",
+      "revision": "3888877fff1b8da1f02a7d2463362cfaaff2b2b7",
+      "build": "source",
+      "external_engine": false,
+      "runtime": [
+        "NeoForge 26.1.2.99"
+      ],
+      "agent_api": "modern"
+    }
+  }
+}

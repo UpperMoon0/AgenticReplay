@@ -35,6 +35,9 @@ jobs:
       - name: Verify camera export runtime dependencies
         if: matrix.module != 'common'
         run: python3 scripts/check_export_dependencies.py $(find ${{ matrix.module }}/build/libs -name "*.jar" ! -name "*-dev*.jar" ! -name "*-sources.jar")
+      - name: Verify owned engine distribution
+        if: matrix.module != 'common'
+        run: python3 scripts/check_engine_jar.py ${{ matrix.module }} $(find ${{ matrix.module }}/build/libs -name "*.jar" ! -name "*-dev*.jar" ! -name "*-sources.jar")
       - name: Verify NeoForge packaging
         if: matrix.module == 'neoforge-26.1.2'
         run: python3 scripts/check_mod_jar.py neoforge-26.1.2/build/libs/*.jar
@@ -50,3 +53,8 @@ jobs:
         with:
           name: Test-results-${{ matrix.module }}
           path: ${{ matrix.module }}/build/test-results/test/
+      - uses: actions/upload-artifact@v4
+        if: matrix.module != 'common'
+        with:
+          name: Sources-${{ matrix.module }}
+          path: ${{ matrix.module }}/build/libs/*-sources.jar

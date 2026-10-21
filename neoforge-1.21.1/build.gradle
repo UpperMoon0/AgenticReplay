@@ -30,7 +30,7 @@ configurations {
 
 processResources {
     inputs.property "version", project.version
-    archivesBaseName = "reforgedplaymod-${project.minecraft_version}"
+    archivesBaseName = "agenticreplay-${project.minecraft_version}"
     filesMatching("META-INF/neoforge.mods.toml") {
         expand "version": project.version
     }
@@ -83,13 +83,18 @@ dependencies {
     //mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
     neoForge "net.neoforged:neoforge:${project.neoforge_version}"
 
-    bundle("com.github.ReplayMod:ReplayStudio:master-SNAPSHOT-slim")
-    minecraftRuntimeLibraries(implementation("com.github.ReplayMod:ReplayStudio:master-SNAPSHOT-slim"))
+    bundle(files('libs/ReplayStudio-master-SNAPSHOT-slim.jar'))
+    minecraftRuntimeLibraries(implementation(files('libs/ReplayStudio-master-SNAPSHOT-slim.jar')))
     include(implementation("com.github.viaversion:opennbt:0a02214"))
     minecraftRuntimeLibraries(implementation("com.github.viaversion:opennbt:0a02214"))
     include(implementation("com.github.ReplayMod:lwjgl-utils:27dcd66"))
     minecraftRuntimeLibraries("com.github.ReplayMod:lwjgl-utils:27dcd66")
     include(implementation("com.github.javagl.JglTF:jgltf-model:3af6de4"))
+    include(implementation("com.github.javagl.JglTF:jgltf-impl-v1:3af6de4"))
+    include(implementation("com.github.javagl.JglTF:jgltf-impl-v2:3af6de4"))
+    include(implementation("com.fasterxml.jackson.core:jackson-databind:2.20.0"))
+    include(implementation("com.fasterxml.jackson.core:jackson-core:2.20.0"))
+    include(implementation("com.fasterxml.jackson.core:jackson-annotations:2.20"))
     include(implementation("com.github.ReplayMod.JavaBlend:2.79.0:a0696f8"))
     include(implementation("org.aspectj:aspectjrt:1.8.2"))
     include(implementation("org.lwjgl:lwjgl-tinyexr:3.3.1"))
@@ -121,3 +126,21 @@ dependencies {
     modCompileOnly("maven.modrinth:sodium:mc1.21.1-0.6.5-neoforge")
     //modRuntimeOnly("maven.modrinth:sodium:mc1.21.1-0.6.5-neoforge")
 }
+
+tasks.register('verifyReplayLibrary') {
+    def library = file('libs/ReplayStudio-master-SNAPSHOT-slim.jar')
+    inputs.file(library)
+    doLast {
+        def checksum = java.security.MessageDigest.getInstance('SHA-256').digest(library.bytes).encodeHex().toString()
+        if (checksum != 'e034b0a39cc906ba38c401a13c09bf6fca5512ecb658428380994f71b7d48250')
+            throw new GradleException('Pinned ReplayStudio input checksum mismatch')
+    }
+}
+tasks.named('compileJava') { dependsOn 'verifyReplayLibrary' }
+
+// Preserve upstream and agent-code notices in binary and source distributions.
+tasks.withType(org.gradle.jvm.tasks.Jar).configureEach {
+    from('../legacy-1.7.10/LICENSE.md') { into 'META-INF'; rename { 'LICENSE-upstream-replaymod.txt' } }
+    from('../LICENSE.txt') { into 'META-INF'; rename { 'LICENSE-agent-code.txt' } }
+}
+java { withSourcesJar() }

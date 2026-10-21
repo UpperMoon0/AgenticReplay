@@ -20,6 +20,7 @@ public final class LegacyClientProxy extends LegacyServerProxy {
                     result.addProperty("apiVersion", 1);
                     result.addProperty("minecraftVersion", "1.7.10");
                     result.addProperty("engine", "ReplayMod 1.7.10-2.5.2");
+                    result.add("engineBuild", LegacyEngineBuild.describe());
                     result.add("renderCompatibility", LegacyRenderCompatibility.current());
                     JsonArray methods = new JsonArray();
                     methods.add(new JsonPrimitive("capabilities"));
