@@ -144,3 +144,7 @@ tasks.withType(org.gradle.jvm.tasks.Jar).configureEach {
     from('../LICENSE.txt') { into 'META-INF'; rename { 'LICENSE-agent-code.txt' } }
 }
 java { withSourcesJar() }
+tasks.named('sourcesJar', org.gradle.jvm.tasks.Jar) {
+    from(project.file('library-sources')) { into 'upstream-libraries' }
+    from(project.file('libs/README.md')) { into 'upstream-libraries' }
+}

@@ -35,7 +35,10 @@
       "runtime": [
         "NeoForge 21.1.82"
       ],
-      "agent_api": "none"
+      "agent_api": "none",
+      "replaystudio_revision": "1e96fda6052562477a54a7ced778f25a547f40ae",
+      "replaystudio_source_proof": "235/235 own classes byte-identical to source build; 15 upstream tests pass",
+      "viaversion_revision": "ff097697873789b06a1954f040814ec808367ccd"
     },
     "neoforge-26.1.2": {
       "base": "ferriarnus/ReForgedPlay",

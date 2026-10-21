@@ -36,9 +36,11 @@ the NeoForge bases are the exact imported upstream branch revisions. See
 - NeoForge 1.21.1 uses the checked-in ReplayStudio snapshot imported with its
   engine branch, SHA-256 `e034b0a39cc906ba38c401a13c09bf6fca5512ecb658428380994f71b7d48250`.
   The build uses this exact file, not a moving remote `master-SNAPSHOT`.
-  Its upstream source commit is not embedded in the historical binary; tracing
-  that library revision remains a provenance gap and is not represented as a
-  reproducible library source build.
+  Its source revision is now established as
+  `1e96fda6052562477a54a7ced778f25a547f40ae`: all 235 ReplayStudio classes
+  match a fresh source build byte-for-byte, and all 15 upstream tests pass.
+  The corresponding source and build are retained, with a CI rebuild/comparison;
+  see [the library provenance](../neoforge-1.21.1/libs/README.md).
 - NeoForge 26.1.2 uses the verified extracted protocol-775 ReplayStudio input;
   see [its release/hash/source provenance](../neoforge-26.1.2/libs/README.md).
 
@@ -51,8 +53,7 @@ No vanilla or private reference-repository source is redistributed.
 Upstream changes are reviewed against the recorded revision, integrated as
 version-local source changes, and validated by the same lane-specific build and
 runtime checks. Future ports must document this same information before being
-declared supported. The binary-backed legacy build and the unresolved 1.21.1
-library source revision must not be described as full source-build parity.
+declared supported. The binary-backed legacy build must not be described as full source-build parity.
 
 ## Confirmed compatibility contracts
 
@@ -100,5 +101,5 @@ Native validation results are recorded in `ENGINE_RUNTIME_VALIDATION.md`.
 The isolated GTNH client completed startup with 325 mods; recording/finalize/
 reopen/seek/playback/export remain unverified for this change. Legacy shader export and the
 UI-only 1.21.1 lane need explicit graphical acceptance; API parity is not assumed.
-Issue #6 remains open for the complete historical source-build gate, unresolved
-library source provenance and any outstanding native acceptance.
+Issue #6 remains open for the complete historical source-build gate and
+any outstanding native acceptance.
