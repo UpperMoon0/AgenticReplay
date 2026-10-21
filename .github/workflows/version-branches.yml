@@ -18,14 +18,15 @@ jobs:
         with:
           distribution: temurin
           java-version: |
-            21
             8
+            21
       - uses: gradle/actions/setup-gradle@v4
       - name: Verify retained source and library inputs
         run: python3 scripts/check_replaystudio_provenance.py
       - name: Rebuild historical ReplayStudio source and run its tests
         run: |
           unzip -q neoforge-1.21.1/library-sources/ReplayStudio-1e96fda.zip -d "$RUNNER_TEMP/replaystudio"
+          sed -i 's/\r$//' "$RUNNER_TEMP/replaystudio/gradlew"
           chmod +x "$RUNNER_TEMP/replaystudio/gradlew"
           cd "$RUNNER_TEMP/replaystudio"
           ./gradlew jar test --no-daemon --console=plain

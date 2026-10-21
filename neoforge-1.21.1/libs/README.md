@@ -18,6 +18,9 @@ in `../library-sources/ReplayStudio-1e96fda.zip`, SHA-256
 Extract that archive to an empty directory and run `./gradlew jar test` with
 Java 21 and a Java 8 toolchain available. Then run:
 
+On Linux, normalize the retained wrapper script's CRLF line endings before
+invocation: `sed -i 's/\r$//' gradlew`. This leaves the source archive unchanged.
+
 ```sh
 python3 scripts/check_replaystudio_provenance.py --rebuilt /path/to/ReplayStudio/build/libs/ReplayStudio-master-SNAPSHOT.jar
 ```
