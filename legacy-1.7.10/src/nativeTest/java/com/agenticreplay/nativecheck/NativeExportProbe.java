@@ -30,6 +30,19 @@ public final class NativeExportProbe {
         final ApiHttpTransport transport = new ApiHttpTransport(
                 Integer.getInteger("agenticreplay.nativecheck.port", 18773), token, queue::enqueue,
                 (method, params) -> {
+                    if ("world.create".equals(method)) {
+                        net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getMinecraft();
+                        if (mc.theWorld != null) throw new IllegalStateException("Start from the menu");
+                        new LegacyReplayBridge().enableRecording(true);
+                        String name = "agenticreplay-native-" + java.util.UUID.randomUUID();
+                        net.minecraft.world.WorldSettings settings = new net.minecraft.world.WorldSettings(6L,
+                                net.minecraft.world.WorldSettings.GameType.CREATIVE, false, false,
+                                net.minecraft.world.WorldType.FLAT).enableCommands();
+                        // Return before the synchronous integrated-server startup; its
+                        // nested loading-screen renders must not dispatch more commands.
+                        com.replaymod.core.ReplayMod.instance.runLater(() -> mc.launchIntegratedServer(name, name, settings));
+                        JsonObject result = new JsonObject(); result.addProperty("world", name); return result;
+                    }
                     if ("capture".equals(method)) {
                         net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getMinecraft();
                         File root = new File("native-check"); root.mkdirs();

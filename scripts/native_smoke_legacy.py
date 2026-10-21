@@ -15,13 +15,16 @@ import urllib.request
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--server', required=True, help='Disposable 127.0.0.1:port server')
+    fixture = parser.add_mutually_exclusive_group(required=True)
+    fixture.add_argument('--server', help='Disposable 127.0.0.1:port server')
+    fixture.add_argument('--singleplayer', action='store_true', help='Create a fresh integrated flat world through the separate probe')
+    fixture.add_argument('--resume-live', action='store_true', help='Continue a test-owned live fixture after slow initial world loading')
     parser.add_argument('--url', default='http://127.0.0.1:18771/rpc')
     parser.add_argument('--probe-url', default='http://127.0.0.1:18773/rpc')
     parser.add_argument('--ffmpeg', default='ffmpeg')
     parser.add_argument('--out', type=Path, default=Path('legacy-1.7.10/build/native-smoke'))
     args = parser.parse_args()
-    if args.server.rsplit(':', 1)[0] not in {'127.0.0.1', 'localhost'}:
+    if args.server and args.server.rsplit(':', 1)[0] not in {'127.0.0.1', 'localhost'}:
         parser.error('Use a disposable loopback server')
     token = os.environ.get('AGENTICREPLAY_SMOKE_TOKEN')
     if not token or len(token) < 32:
@@ -45,7 +48,14 @@ def main():
     def wait(method, predicate, params=None, seconds=90):
         deadline = time.monotonic() + seconds
         while time.monotonic() < deadline:
-            result = rpc(method, params)
+            try:
+                result = rpc(method, params)
+            except RuntimeError as failure:
+                # These waits only poll read-only state. World initialization can
+                # take longer than one HTTP deadline on the full GTNH profile.
+                if method in {'player.state', 'status', 'replay.list'} and 'Client operation timed out' in str(failure):
+                    continue
+                raise
             if predicate(result):
                 return result
             time.sleep(.5)
@@ -56,10 +66,13 @@ def main():
         result['capabilities'] = rpc('capabilities')
         assert result['capabilities']['engineBuild']['externalReplayEngineRequired'] is False
         initial = rpc('status')
-        assert not initial['live'] and not initial['replayOpen'], 'Start the isolated client from its menu'
+        assert not initial['replayOpen'] and initial['live'] == args.resume_live, 'Start at the menu, or explicitly resume the test-owned live fixture'
         before = {row['name'] for row in rpc('replay.list')}
-        rpc('client.connect', {'address': args.server, 'recording': True})
-        live = wait('player.state', lambda state: state['live'] and state['screen'] == 'none')
+        if args.singleplayer:
+            result['world'] = rpc('world.create', probe=True)
+        elif not args.resume_live:
+            rpc('client.connect', {'address': args.server, 'recording': True})
+        live = wait('player.state', lambda state: state['live'] and state['screen'] == 'none', seconds=300 if args.singleplayer else 90)
         result['live'] = live
         rpc('player.look', {'yaw': 0, 'pitch': 20})
         rpc('recording.marker', {'name': 'native-fork-start'})

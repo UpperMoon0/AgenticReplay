@@ -120,8 +120,14 @@ dependencies {
     modCompileOnly("maven.modrinth:iris:1.8.6+1.21.1-neoforge")
     //modRuntimeOnly("maven.modrinth:iris:1.8.6+1.21.1-neoforge")
 
-    modCompileOnly("org.embeddedt:embeddium-1.21:1.0.8-beta.367+mc1.21")
-    modRuntimeOnly("org.embeddedt:embeddium-1.21:1.0.8-beta.367+mc1.21")
+    modCompileOnly("org.embeddedt:embeddium-1.21:1.0.8-beta.367+mc1.21") {
+        exclude group: "io.github.llamalad7", module: "mixinextras-neoforge"
+    }
+    // NeoForge already supplies MixinExtras 0.4.1. Remapping Embeddium's old
+    // transitive 0.3.5 produces a second module and a split-package boot failure.
+    modRuntimeOnly("org.embeddedt:embeddium-1.21:1.0.8-beta.367+mc1.21") {
+        exclude group: "io.github.llamalad7", module: "mixinextras-neoforge"
+    }
 
     modCompileOnly("maven.modrinth:sodium:mc1.21.1-0.6.5-neoforge")
     //modRuntimeOnly("maven.modrinth:sodium:mc1.21.1-0.6.5-neoforge")
@@ -144,6 +150,21 @@ tasks.withType(org.gradle.jvm.tasks.Jar).configureEach {
     from('../LICENSE.txt') { into 'META-INF'; rename { 'LICENSE-agent-code.txt' } }
 }
 java { withSourcesJar() }
+
+// Opt-in native acceptance fixture; excluded from every production artifact.
+sourceSets {
+    nativeTest {
+        java.srcDir '../api-common/src/main/java'
+        compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
+        runtimeClasspath += sourceSets.main.output + sourceSets.main.runtimeClasspath
+    }
+}
+if (providers.gradleProperty('nativeProbe').isPresent()) {
+    loom.mods {
+        agenticreplaynativecheck { sourceSet sourceSets.nativeTest }
+    }
+    tasks.named('runClient') { dependsOn 'nativeTestClasses' }
+}
 tasks.named('sourcesJar', org.gradle.jvm.tasks.Jar) {
     from(project.file('library-sources')) { into 'upstream-libraries' }
     from(project.file('libs/README.md')) { into 'upstream-libraries' }

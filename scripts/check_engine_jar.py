@@ -39,6 +39,7 @@ def check(lane, path):
     with zipfile.ZipFile(path) as archive:
         names = archive.namelist()
         assert len(names) == len(set(names)), 'Duplicate ZIP entries'
+        assert not any('/nativecheck/' in n for n in names), 'Native fixture leaked into production'
         entries = all_entries(archive)
         manifest = re.sub(r'\r?\n ', '', archive.read('META-INF/MANIFEST.MF').decode())
         attributes = dict(line.split(': ', 1) for line in manifest.splitlines() if ': ' in line)

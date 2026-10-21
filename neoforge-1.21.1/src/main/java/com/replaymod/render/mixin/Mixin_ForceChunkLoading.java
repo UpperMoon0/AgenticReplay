@@ -3,6 +3,8 @@ package com.replaymod.render.mixin;
 import com.llamalad7.mixinextras.sugar.Local;
 import com.replaymod.render.hooks.ForceChunkLoadingHook;
 import com.replaymod.render.hooks.IForceChunkLoading;
+import com.replaymod.render.hooks.EmbeddiumTerrainBarrier;
+import com.replaymod.render.hooks.EmbeddiumTerrainReadiness;
 import com.replaymod.render.utils.EmbeddiumFlawlessFramesHelper;
 import com.replaymod.render.utils.SodiumFlawlessFramesHelper;
 import net.minecraft.client.MinecraftClient;
@@ -58,6 +60,10 @@ public abstract class Mixin_ForceChunkLoading implements IForceChunkLoading {
         }
 
         if (EmbeddiumFlawlessFramesHelper.hasEmbeddium() && EmbeddiumFlawlessFramesHelper.supportFlawlessFrames()) {
+            EmbeddiumTerrainReadiness readiness = EmbeddiumTerrainReadiness.current();
+            EmbeddiumTerrainBarrier.complete(
+                    () -> setupTerrain(camera, this.frustum, this.capturedFrustum != null, this.client.player.isSpectator()),
+                    readiness::agenticReplay$terrainWorkPending);
             return;
         }
 

@@ -101,7 +101,8 @@ growth with live operands. None of these is a native runtime certification.
 Native validation results are recorded in `ENGINE_RUNTIME_VALIDATION.md`.
 The isolated GTNH client completed startup with 325 mods; recording/finalize/
 reopen/seek/playback/export passed in the separate minimal Angelica fixture.
-The final full-GTNH artifact still needs a repeat run. Legacy shader export and the
-UI-only 1.21.1 lane need explicit graphical acceptance; API parity is not assumed.
+The updated full GTNH integrated-world round trip also passed, including export
+and client restoration. Shader-pack export remains unverified; all four retained lanes now have
+representative shader-off native round-trip evidence. API parity is not assumed.
 Issue #6 remains open for the complete historical source-build gate and
 any outstanding native acceptance.

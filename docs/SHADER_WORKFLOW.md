@@ -2,7 +2,7 @@
 
 Replay recording stores timestamped network/world data, not the rendered gameplay pixels. This makes recording with a shader pack disabled and enabling it for export possible in principle. Offline export renders frames at the chosen output FPS; demanding shaders generally increase export time. Server lag and chunks/entities never recorded cannot be repaired afterward.
 
-**GTNH's Angelica rendering stack is not yet verified with this adapter and ReplayMod 1.7.10-2.5.2. Source inspection found specific integration gaps below. A successful build is not proof that shader export works.**
+**The maintained fork passed a shader-off recording/replay/export cycle in the full GTNH 2.9.0-RC-2 stack. Shader-pack animation clocks and hand rendering remain unverified; this result does not certify shader export.**
 
 ## GTNH uses Angelica
 
