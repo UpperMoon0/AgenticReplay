@@ -1,0 +1,48 @@
+{
+  "required": true,
+  "package": "com.replaymod.replay.mixin",
+  "plugin": "com.replaymod.core.ReplayModMixinConfigPlugin",
+  "mixins": [],
+  "server": [],
+  "client": [
+    //#if MC>=11600
+    "Mixin_MoveRealmsButton",
+    //#endif
+    //#if MC>=11400
+    "MixinCamera",
+    "MixinInGameHud",
+    //#endif
+    "EntityLivingBaseAccessor",
+    //#if MC>=11400
+    "Mixin_ShowSpectatedHand_NoOF",
+    "Mixin_ShowSpectatedHand_OF",
+    //#else
+    //$$ "EntityOtherPlayerMPAccessor",
+    //#endif
+    "EntityPlayerAccessor",
+    "FirstPersonRendererAccessor",
+    //#if MC>=10904
+    "MixinParticleManager",
+    //#endif
+    //#if MC>=10800
+    "MixinGuiSpectator",
+    "MixinRenderArrow",
+    //#if MC<11400
+    //$$ "MixinRenderManager",
+    //#endif
+    "MixinViewFrustum",
+    //#else
+    //$$ "MixinEntityRenderer",
+    //$$ "MixinFMLClientHandler",
+    //#endif
+    "MixinKeyboardListener",
+    "MixinPlayerControllerMP",
+    "MixinRenderItem",
+    "MixinRenderLivingBase",
+    "MixinTileEntityEndPortalRenderer",
+    "MixinWorldClient"
+  ],
+  "compatibilityLevel": "JAVA_8",
+  "minVersion": "0.6.11",
+  "refmap": "mixins.replaymod.refmap.json"
+}

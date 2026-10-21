@@ -1,7 +1,7 @@
 name: Build
 on:
   push:
-    branches: ['main', '1.20.1', 'feat/**', 'codex/**']
+    branches: ['main']
   pull_request:
 concurrency:
   group: agenticreplay-${{ github.ref }}

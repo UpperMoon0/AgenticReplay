@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fetch only the hash-pinned official ReplayMod runtime; never redistribute it."""
+"""Verify the pinned historical engine input and create its compile ZIP."""
 import hashlib
 from pathlib import Path
 import urllib.request
@@ -14,6 +14,8 @@ DEST = Path(__file__).resolve().parents[1] / 'libs' / 'replaymod-1.7.10-2.5.2.ja
 def main():
     if DEST.exists():
         data = DEST.read_bytes()
+    elif (DEST.parent.parent / 'engine-inputs' / DEST.name).is_file():
+        data = (DEST.parent.parent / 'engine-inputs' / DEST.name).read_bytes()
     else:
         with urllib.request.urlopen(URL, timeout=90) as response:
             data = response.read(32 * 1024 * 1024 + 1)
