@@ -9,8 +9,7 @@ tasks.register('testAllVersions') { dependsOn subprojects.collect { "${it.path}:
 
 // Older engine branches have incompatible Loom/RFG plugin versions. Evaluate
 // each in its own build, with its own Minecraft/version properties.
-def standaloneLanes = ['legacy-1.7.10', 'forge-1.18.2', 'forge-1.19.2',
-                       'neoforge-1.20.6', 'neoforge-1.21.1', 'neoforge-1.21.8']
+def standaloneLanes = ['legacy-1.7.10', 'neoforge-1.21.1']
 standaloneLanes.each { lane ->
     ['build', 'test'].each { action ->
         def taskName = "${action}-${lane}"

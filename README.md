@@ -1,9 +1,9 @@
 # AgenticReplay
 
 Multi-version agent-controlled fork of [ReForgedPlay](https://github.com/ferriarnus/ReForgedPlay), based on [ReplayMod](https://github.com/ReplayMod/ReplayMod).
-Version branches are now consolidated in `main`: **Forge 1.7.10, 1.18.2,
-1.19.2, 1.20.1; NeoForge 1.20.6, 1.21.1, 1.21.8 and 26.1.2**.
-NeoForge 1.20.4 has been removed. See the [branch integration and capability
+Version branches are now consolidated in `main`: **Forge 1.7.10 and 1.20.1;
+NeoForge 1.21.1 and 26.1.2**. Minecraft 1.18.2, 1.19.2, 1.20.4, 1.20.6 and
+1.21.8 have been removed. See the [branch integration and capability
 matrix](docs/BRANCH_CONSOLIDATION.md); the older UI-only and experimental engines
 do not inherit the modern agent API or a native compatibility certification.
 

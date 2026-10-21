@@ -1,17 +1,14 @@
 # Version branches consolidated into main
 
-The version branches are preserved as separate engine lanes. This integration
+The retained version branches are preserved as separate engine lanes. This integration
 does not assert equal APIs, renderer compatibility, or native test coverage.
-NeoForge 1.20.4 is removed entirely by request; it is not a build target.
+Minecraft 1.18.2, 1.19.2, 1.20.4, 1.20.6 and 1.21.8 are removed by request;
+their implementations are absent and they are not build targets.
 
 | Source branch | Module | Existing capabilities |
 | --- | --- | --- |
-| `1.18.2` | `forge-1.18.2` | Original ReplayMod recording/playback/path/render UI |
-| `1.19.2` | `forge-1.19.2` | Original ReplayMod recording/playback/path/render UI |
 | `1.20.1` and `codex/multiversion-26.1.2` | `forge-1.20.1` | Engine, agent API, actors, capture/export |
-| `1.20.6` | `neoforge-1.20.6` | Original ReplayMod recording/playback/path/render UI |
 | `1.21` (Minecraft 1.21.1) | `neoforge-1.21.1` | Original ReplayMod recording/playback/path/render UI |
-| `1.21.8` | `neoforge-1.21.8` | Existing experimental engine, including syncing work |
 | `codex/multiversion-26.1.2` | `neoforge-26.1.2` | Engine, agent API, actors, capture/export |
 | `feat/forge-1.7.10` merged in `1.20.1` | `legacy-1.7.10` | Limited agent adapter; external engine until issue #6 |
 
@@ -28,7 +25,7 @@ Neither directory is a second runtime mod to install.
 
 Run `./gradlew :forge-1.20.1:build` or
 `./gradlew :neoforge-26.1.2:build` for the modern modules. Other lanes have isolated
-builds, e.g. `./gradlew -p forge-1.18.2 build`. `buildAll` and `testAllVersions`
+builds, e.g. `./gradlew -p neoforge-1.21.1 build`. `buildAll` and `testAllVersions`
 include every lane. Prepare the pinned legacy dependency with
 `python3 legacy-1.7.10/scripts/prepare_replaymod.py` before building legacy.
 
