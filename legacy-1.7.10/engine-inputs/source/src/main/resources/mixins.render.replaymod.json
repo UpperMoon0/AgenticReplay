@@ -1,0 +1,51 @@
+{
+  "required": true,
+  "package": "com.replaymod.render.mixin",
+  "mixins": [],
+  "server": [],
+  "client": [
+    "Mixin_ChromaKeyColorSky",
+    "Mixin_ChromaKeyForceSky",
+    "Mixin_CubicRotation",
+    "Mixin_SkipBlockOutlinesDuringRender",
+    //#if MC>=10800
+    //#if MC>=11500
+    "Mixin_BlockOnChunkRebuilds",
+    //#else
+    //$$ "ChunkRenderDispatcherAccessor",
+    //$$ "MixinChunkRenderWorker",
+    //#endif
+    "Mixin_ForceChunkLoading",
+    //#endif
+    //#if MC>=11400
+    "Mixin_PreserveDepthDuringHandRendering",
+    "Mixin_WindowsWorkaroundForTinyEXRNatives",
+    "MainWindowAccessor",
+    //#endif
+    "WorldRendererAccessor",
+    //#if MC>=10904
+    "MixinParticleManager",
+    //#else
+    //$$ "MixinEffectRenderer",
+    //$$ "MixinRendererLivingEntity",
+    //#endif
+    "MixinCamera",
+    "MixinEntityRenderer",
+    //#if MC>=11400
+    "MixinFogRenderer",
+    //#endif
+    //#if MC>=10800
+    "MixinGlStateManager",
+    //#endif
+    "MixinFrustum",
+    "MixinRender",
+    //#if MC>=10800
+    //#else
+    //$$ "MixinOpenGlHelper",
+    //#endif
+    "MixinRenderManager"
+  ],
+  "compatibilityLevel": "JAVA_8",
+  "minVersion": "0.6.11",
+  "refmap": "mixins.replaymod.refmap.json"
+}

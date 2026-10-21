@@ -1,0 +1,16 @@
+{
+  "origin/main": "32c871781277894e2e67aca2f6f3fb95e8357a81",
+  "origin/1.18.2": "4835287e7c56754b467296c9d96fd05b70a8994c",
+  "origin/1.19.2": "212989b8094adc48f25e75be5750493bc4334a0a",
+  "origin/1.20.1": "6ccebfab3dc44d49d0101fb1971965f61353677c",
+  "origin/1.20.6": "b8f52014ca09329a4b6f9facd12922841dd75b5b",
+  "origin/1.21": "a8dfcdce1947ac2fb73375d476710a6500b1ada5",
+  "origin/1.21.8": "24f307470304f8bc6506a81c5787e01ea2ff090f",
+  "origin/codex/multiversion-26.1.2": "cfec77df894d131ccef04077ca07a940d5ed5b67",
+  "origin/codex/scripted-actors": "bc8346f5e4e4de27a3244929bcd8d158a1afa372",
+  "origin/feat/agent-control-api": "e17ef7e78bc8575fb4c4cb6f9ba7a4c8b361fd33",
+  "origin/feat/forge-1.7.10": "a307bf956d18c827989add5eab1856950eaf360c",
+  "origin/feat/live-player-control": "7814a09dd90f5c762c581a3ff5a3ef8185f9e306",
+  "codex/scripted-actors": "8ea244519489d427428a264072bdd794fdd17a14",
+  "feat/live-player-control": "3ac4231990e3792e48cb1c1af57e1cf565bf26fb"
+}

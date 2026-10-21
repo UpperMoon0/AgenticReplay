@@ -1,0 +1,31 @@
+{
+  "required": true,
+  "package": "com.replaymod.core.mixin",
+  "mixins": [],
+  "server": [],
+  "client": [
+    //#if MC>=11400
+    "AbstractButtonWidgetAccessor",
+    "Mixin_ContextualKeyBindings",
+    "MixinGameRenderer",
+    "Mixin_HideDynamicResourcePacks",
+    "Mixin_RegisterDynamicResourcePacks",
+    //#endif
+    //#if MC>=11400
+    "MixinMouse",
+    //#endif
+    //#if MC<10800
+    //$$ "ResourcePackRepositoryAccessor",
+    //#endif
+    "MixinKeyboardListener",
+    "MixinMinecraft",
+    "GuiMainMenuAccessor",
+    "GuiScreenAccessor",
+    "KeyBindingAccessor",
+    "MinecraftAccessor",
+    "TimerAccessor"
+  ],
+  "compatibilityLevel": "JAVA_8",
+  "minVersion": "0.6.11",
+  "refmap": "mixins.replaymod.refmap.json"
+}

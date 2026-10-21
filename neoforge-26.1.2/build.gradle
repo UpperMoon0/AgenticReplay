@@ -1,0 +1,114 @@
+plugins {
+    id 'java-library'
+    id 'maven-publish'
+    id 'net.neoforged.moddev' version '2.0.141'
+}
+base { archivesName = 'agenticreplay-neoforge-26.1.2' }
+java { toolchain.languageVersion = JavaLanguageVersion.of(25); withSourcesJar() }
+sourceSets.main.java.srcDir rootProject.file('common/src/main/java')
+sourceSets.test.java.srcDir rootProject.file('common/src/test/java')
+neoForge {
+    version = rootProject.neoforge_version_26_1_2
+    runs { client { client() } }
+    mods { replaymod { sourceSet sourceSets.main } }
+}
+repositories {
+    flatDir { dirs 'libs' }
+    maven { url 'https://jitpack.io' }
+    maven { url 'https://api.modrinth.com/maven' }
+    maven { url 'https://maven.blamejared.com' }
+}
+configurations { embedded }
+dependencies { implementation files(configurations.embedded) }
+dependencies {
+    embedded files('libs/ReplayStudio-replaymod-26.1-2.6.27.jar')
+    embedded 'com.github.viaversion:opennbt:0a02214'
+    embedded 'com.github.ReplayMod:lwjgl-utils:27dcd66'
+    embedded 'com.github.javagl.JglTF:jgltf-model:3af6de4'
+    embedded 'com.fasterxml.jackson.core:jackson-databind:2.20.0'
+    embedded 'com.github.ReplayMod.JavaBlend:2.79.0:a0696f8'
+    embedded 'org.aspectj:aspectjrt:1.8.2'
+    embedded 'org.lwjgl:lwjgl-tinyexr:3.4.1'
+    embedded 'org.lwjgl:lwjgl-tinyexr:3.4.1:natives-windows'
+    embedded 'org.lwjgl:lwjgl-tinyexr:3.4.1:natives-linux'
+    embedded 'org.lwjgl:lwjgl-tinyexr:3.4.1:natives-macos'
+    embedded 'com.googlecode.mp4parser:isoparser:1.1.7'
+    embedded 'org.apache.commons:commons-exec:1.3'
+    embedded 'com.google.apis:google-api-services-youtube:v3-rev178-1.22.0'
+    embedded 'com.google.api-client:google-api-client-gson:1.20.0'
+    embedded 'com.google.api-client:google-api-client-java6:1.20.0'
+    embedded 'com.google.oauth-client:google-oauth-client-jetty:1.20.0'
+    compileOnly 'maven.modrinth:iris:1.8.6+1.21.1-neoforge'
+    compileOnly 'org.embeddedt:embeddium-1.21:1.0.8-beta.367+mc1.21'
+    compileOnly 'maven.modrinth:sodium:mc1.21.1-0.6.5-neoforge'
+    testImplementation 'junit:junit:4.13.2'
+}
+processResources {
+    inputs.property 'version', project.version
+    filesMatching('META-INF/neoforge.mods.toml') { expand version: project.version }
+}
+jar {
+    from { configurations.embedded.collect { it.isDirectory() ? it : zipTree(it) } }
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    exclude 'fabric.mod.json', 'mcmod.info', 'replay.accesswidener'
+    exclude 'META-INF/*.SF', 'META-INF/*.RSA', 'META-INF/*.DSA', 'module-info.class'
+}
+tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8' }
+
+tasks.withType(JavaCompile).configureEach { options.compilerArgs += ['-Xmaxerrs', '500'] }
+
+// ModDev's Minecraft compile configuration is separate from ordinary Java tests.
+sourceSets.test.compileClasspath += sourceSets.main.compileClasspath
+sourceSets.test.runtimeClasspath += sourceSets.main.compileClasspath
+dependencies { testImplementation 'com.google.code.gson:gson:2.10.1' }
+neoForge.runs {
+    portSmokeClient {
+        client()
+        gameDirectory = project.file('run/port-smoke')
+        systemProperty 'agenticreplay.token', 'local-port-smoke-token-26-1-2-development'
+        systemProperty 'agenticreplay.port', '18766'
+        systemProperty 'agenticreplay.background', 'true'
+        systemProperty 'java.awt.headless', 'true'
+        jvmArgument '-Xmx2G'
+        programArguments.addAll '--width', '640', '--height', '360'
+    }
+}
+
+// Minecraft supplies these libraries. Old transitive copies from the optional
+// YouTube integration must not shadow the loader/game libraries or enter the jar.
+configurations.embedded {
+    // Use the runtime's current codec; old embedded Hex breaks Sodium fingerprinting.
+    exclude group: 'commons-codec'
+    exclude group: 'com.google.guava'
+    exclude group: 'com.google.code.gson'
+    exclude group: 'io.netty'
+    exclude group: 'org.lwjgl', module: 'lwjgl'
+    exclude group: 'org.slf4j'
+    exclude group: 'org.apache.logging.log4j'
+}
+
+test { exclude '**/*$*' }
+
+neoForge.runs {
+    portSmokeServer {
+        server()
+        gameDirectory = project.file('run/port-smoke-server')
+        jvmArgument '-Xmx1G'
+        programArgument '--nogui'
+    }
+}
+
+def verifyReplayLibrary = tasks.register('verifyReplayLibrary') {
+    def library = layout.projectDirectory.file('libs/ReplayStudio-replaymod-26.1-2.6.27.jar')
+    inputs.file(library)
+    doLast {
+        def checksum = java.security.MessageDigest.getInstance('SHA-256').digest(library.asFile.bytes).encodeHex().toString()
+        if (checksum != '684910892bb63fff7b57f5f920ac058a9dc8b416089ae51f0101a74c90360a92') {
+            throw new GradleException('ReplayStudio checksum mismatch; reproduce it with scripts/extract_replaystudio.py')
+        }
+    }
+}
+tasks.named('compileJava') { dependsOn verifyReplayLibrary }
+
+sourceSets.main.java.srcDir rootProject.file('api-common/src/main/java')
+sourceSets.test.java.srcDir rootProject.file('api-common/src/test/java')
