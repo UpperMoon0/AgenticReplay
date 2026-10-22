@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.8.0
+
+- Ship the legacy replay engine and agent adapter as one maintained fork artifact for Forge 1.7.10/UniMixins. Compile GL compatibility changes from source, retain GL injection targets/state callbacks, and validate packaged FML discovery. Preserve the original UI and existing capability limits.
+- Keep the three modern engine implementations in their version lanes. Pin the imported NeoForge 1.21.1 replay library by hash and package its missing camera-export glTF/Jackson dependencies.
+- Add cross-lane distribution checks, source/license notices, provenance and migration documentation. The legacy fork uses a verified binary base plus source overlays; restoring its complete historical source build and broader native runtime acceptance remain explicit gates.
+
 ## 0.7.5
 
 - Update optional Forge Distant Horizons camera/detail work on every exported frame, including frozen replay time channels. Run it after restoring the render viewport; do not advance world time to refresh terrain.

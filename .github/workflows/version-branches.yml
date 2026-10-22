@@ -10,6 +10,28 @@ concurrency:
   group: version-engines-${{ github.ref }}
   cancel-in-progress: true
 jobs:
+  library-provenance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: |
+            8
+            21
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Verify retained source and library inputs
+        run: python3 scripts/check_replaystudio_provenance.py
+      - name: Rebuild historical ReplayStudio source and run its tests
+        run: |
+          unzip -q neoforge-1.21.1/library-sources/ReplayStudio-1e96fda.zip -d "$RUNNER_TEMP/replaystudio"
+          sed -i 's/\r$//' "$RUNNER_TEMP/replaystudio/gradlew"
+          chmod +x "$RUNNER_TEMP/replaystudio/gradlew"
+          cd "$RUNNER_TEMP/replaystudio"
+          ./gradlew jar test --no-daemon --console=plain
+      - name: Compare every ReplayStudio class with the imported library
+        run: python3 scripts/check_replaystudio_provenance.py --rebuilt "$RUNNER_TEMP/replaystudio/build/libs/ReplayStudio-master-SNAPSHOT.jar"
   build:
     runs-on: ubuntu-latest
     strategy:
@@ -24,7 +46,9 @@ jobs:
           java-version: '21'
       - uses: gradle/actions/setup-gradle@v4
       - name: Build retained engine
-        run: chmod +x gradlew && ./gradlew -p ${{ matrix.module }} build --console=plain
+        run: chmod +x gradlew && ./gradlew -p ${{ matrix.module }} build nativeTestClasses --console=plain
+      - name: Verify owned engine distribution
+        run: python3 scripts/check_engine_jar.py ${{ matrix.module }} $(find ${{ matrix.module }}/build/libs -name '*.jar' ! -name '*-dev*.jar' ! -name '*-sources.jar')
       - uses: actions/upload-artifact@v4
         with:
           name: AgenticReplay-${{ matrix.module }}
@@ -38,3 +62,7 @@ jobs:
           name: Test-results-${{ matrix.module }}
           path: ${{ matrix.module }}/build/test-results/test/
           if-no-files-found: ignore
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Sources-${{ matrix.module }}
+          path: ${{ matrix.module }}/build/libs/*-sources.jar

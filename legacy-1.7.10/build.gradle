@@ -22,9 +22,21 @@ dependencies { testImplementation 'junit:junit:4.13.2' }
 processResources {
     inputs.property 'version', project.version
     filesMatching('mcmod.info') { expand(version: project.version) }
+    inputs.file('engine-inputs/replaymod-1.7.10-2.5.2.jar')
+    doLast {
+        def metadata = new File(destinationDir, 'mcmod.info')
+        def json = new groovy.json.JsonSlurper()
+        def adapter = json.parse(metadata)
+        def engine = new java.util.zip.ZipFile(file('engine-inputs/replaymod-1.7.10-2.5.2.jar'))
+        try {
+            def upstream = engine.getInputStream(engine.getEntry('mcmod.info')).withCloseable { json.parse(it) }
+            upstream[0].name = 'AgenticReplay Replay Engine'
+            metadata.text = groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(upstream + adapter))
+        } finally { engine.close() }
+    }
 }
 
-// The official engine stays a separate runtime dependency, never shaded into our jar.
+// Pinned upstream input; compatibility replacements are compiled from this lane's source.
 def replayMod = file('libs/replaymod-1.7.10-2.5.2.jar')
 if (!replayMod.isFile()) throw new GradleException('Run python3 legacy-1.7.10/scripts/prepare_replaymod.py first')
 def replayHash = java.security.MessageDigest.getInstance('SHA-256').digest(replayMod.bytes).encodeHex().toString()
@@ -51,7 +63,7 @@ try {
     compileZip.close()
 }
 dependencies { implementation rfg.deobf(files(compileReplayMod)) }
-tasks.withType(Jar).configureEach {
+tasks.withType(org.gradle.jvm.tasks.Jar).configureEach {
     from('LICENSE.md') { into 'META-INF'; rename { 'LICENSE-agenticreplay.txt' } }
 }
 
@@ -59,8 +71,70 @@ sourceSets {
     main.java.srcDir '../api-common/src/main/java'
     test.java.srcDir '../api-common/src/test/java'
 }
-tasks.withType(Jar).configureEach {
+tasks.withType(org.gradle.jvm.tasks.Jar).configureEach {
     from('../api-common/LICENSE.txt') { into 'META-INF'; rename { 'LICENSE-agenticreplay-common.txt' } }
 }
 
 tasks.injectTags.configure { outputClassName = 'com.agenticreplay.legacy.BuildInfo' }
+
+// Only the complete fork is a runtime distributable. The reobfuscated adapter
+// and its replacement classes remain internal assembly inputs.
+tasks.named('reobfJar', org.gradle.jvm.tasks.Jar) {
+    destinationDirectory = layout.buildDirectory.dir('engine-inputs')
+    archiveClassifier = 'adapter'
+}
+tasks.named('jar', org.gradle.jvm.tasks.Jar) { destinationDirectory = layout.buildDirectory.dir('engine-inputs') }
+
+def forkJar = tasks.register('forkJar', org.gradle.jvm.tasks.Jar) {
+    dependsOn tasks.named('reobfJar')
+    inputs.property 'bootstrapPolicy', 'unimixins-inject-data-v3'
+    archiveClassifier = ''
+    preserveFileTimestamps = false
+    reproducibleFileOrder = true
+    duplicatesStrategy = DuplicatesStrategy.FAIL
+    from({ zipTree(tasks.named('reobfJar', org.gradle.jvm.tasks.Jar).get().archiveFile.get().asFile) }) {
+        exclude 'META-INF/MANIFEST.MF'
+        exclude 'META-INF/LICENSE-agenticreplay*.txt'
+    }
+    from({ zipTree(compileReplayMod) }) {
+        exclude 'META-INF/MANIFEST.MF', 'mcmod.info'
+        // UniMixins owns bootstrap for this launch profile. Mixing its service
+        // with the historical bundled Mixin produces loader-constraint errors.
+        exclude 'org/spongepowered/**/*.class', 'META-INF/services/org.spongepowered.*'
+        exclude 'META-INF/services/javax.annotation.processing.Processor'
+        exclude 'com/replaymod/core/asm/GLStateTrackerTransformer*.class'
+        exclude 'com/replaymod/render/hooks/GLStateTracker*.class'
+        exclude 'com/replaymod/core/LoadingPlugin*.class'
+    }
+    manifest {
+        attributes('FMLCorePlugin': 'com.replaymod.core.LoadingPlugin',
+                   'FMLCorePluginContainsFMLMod': 'true', 'ForceLoadAsMod': 'true',
+                   'FMLAT': 'replaymod_at.cfg',
+                   'AgenticReplay-Launch-Profile': 'unimixins',
+                   'AgenticReplay-Engine-Build': 'source-overlay-v1',
+                   'AgenticReplay-Upstream-SHA256': replayHash)
+    }
+}
+tasks.named('assemble') { dependsOn forkJar }
+tasks.named('test') {
+    dependsOn forkJar
+    systemProperty 'agenticreplay.distributable', forkJar.get().archiveFile.get().asFile.absolutePath
+}
+tasks.named('sourcesJar', org.gradle.jvm.tasks.Jar) {
+    from(project.file('engine-inputs/source')) { into 'upstream'; exclude 'docs/**' }
+    from(project.files('build.gradle', 'settings.gradle', 'scripts')) { into 'build-inputs' }
+}
+
+// Explicit native acceptance tooling is a separate mod, never a production input.
+sourceSets {
+    nativeTest {
+        compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
+        runtimeClasspath += compileClasspath
+    }
+}
+tasks.register('nativeProbeJar', org.gradle.jvm.tasks.Jar) {
+    dependsOn tasks.named('nativeTestClasses')
+    from sourceSets.nativeTest.output
+    archiveClassifier = 'native-probe-dev'
+    destinationDirectory = layout.buildDirectory.dir('native-tools')
+}

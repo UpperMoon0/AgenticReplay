@@ -21,7 +21,7 @@ public class ForceChunkLoadingHook {
     public void uninstall() {
         IForceChunkLoading.from(hooked).replayModRender_setHook(null);
         if (LoadingModList.get().getModFileById("embeddium") != null) {
-            FlawlessFramesHelper.setEnabled(true);
+            FlawlessFramesHelper.setEnabled(false);
         }
     }
 

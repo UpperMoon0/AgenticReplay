@@ -46,7 +46,9 @@ jobs:
       - name: Verify official historical runtime
         run: python3 legacy-1.7.10/scripts/prepare_replaymod.py
       - name: Build and test Java 8 legacy client
-        run: ./gradlew -p legacy-1.7.10 build --console=plain
+        run: ./gradlew -p legacy-1.7.10 build reobfNativeProbeJar --console=plain
+      - name: Verify single owned engine distributable
+        run: python3 scripts/check_engine_jar.py legacy-1.7.10 $(find legacy-1.7.10/build/libs -name '*.jar' ! -name '*-sources.jar')
       - uses: actions/upload-artifact@v4
         with:
           name: AgenticReplay-Forge-1.7.10

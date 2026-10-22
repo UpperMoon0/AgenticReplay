@@ -1,10 +1,10 @@
 [{
   "modid": "agenticreplay",
   "name": "AgenticReplay",
-  "description": "Authenticated agent controls for ReplayMod 2.5.2 on Forge 1.7.10. Requires the separate official ReplayMod jar.",
+  "description": "AgenticReplay with its maintained ReplayMod 2.5.2 engine fork for Forge 1.7.10 and UniMixins. Install this single jar.",
   "version": "${version}",
   "mcversion": "1.7.10",
   "url": "https://github.com/UpperMoon0/AgenticReplay",
   "authorList": ["AgenticReplay contributors"],
-  "dependencies": ["replaymod"]
+  "dependencies": ["replaymod", "unimixins"]
 }]

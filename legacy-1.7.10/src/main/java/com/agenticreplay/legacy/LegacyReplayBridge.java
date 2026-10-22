@@ -141,6 +141,7 @@ public final class LegacyReplayBridge {
         out.addProperty("live", mc.theWorld != null && mc.thePlayer != null && handler == null);
         out.addProperty("screen", mc.currentScreen == null ? "none" : mc.currentScreen.getClass().getSimpleName());
         out.addProperty("replayModVersion", core().getVersion());
+        out.add("engineBuild", LegacyEngineBuild.describe());
         out.add("renderCompatibility", LegacyRenderCompatibility.current());
         out.addProperty("minimalMode", ReplayMod.isMinimalMode());
         out.addProperty("recordServer", core().getSettingsRegistry().get(Setting.RECORD_SERVER));
