@@ -63,7 +63,18 @@ def check(lane, path):
             assert b'notify_glEnable' in tracker and b'notify_glDisable' in tracker
             seed = Path(__file__).resolve().parents[1] / 'legacy-1.7.10/engine-inputs/replaymod-1.7.10-2.5.2.jar'
             with zipfile.ZipFile(seed) as upstream:
-                replacement_families = ('com/replaymod/core/asm/GLStateTrackerTransformer', 'com/replaymod/render/hooks/GLStateTracker', 'com/replaymod/core/LoadingPlugin')
+                # Explicit source-owned replacements only; every other upstream byte stays pinned.
+                replacement_families = (
+                    'com/replaymod/core/asm/GLStateTrackerTransformer',
+                    'com/replaymod/render/hooks/GLStateTracker',
+                    'com/replaymod/core/LoadingPlugin',
+                    'com/replaymod/recording/mixin/MixinGuiScreen',
+                )
+                for family in replacement_families:
+                    assert family + '.class' in names, f'Missing source-owned replacement: {family}'
+                    assert archive.read(family + '.class') != upstream.read(family + '.class'), (
+                        f'Expected patched engine class to differ from pinned seed: {family}'
+                    )
                 for name in upstream.namelist():
                     if name.endswith('/') or name in {'META-INF/MANIFEST.MF', 'mcmod.info', 'META-INF/services/javax.annotation.processing.Processor'} or name.startswith(replacement_families + ('META-INF/services/org.spongepowered.',)) or (name.startswith('org/spongepowered/') and name.endswith('.class')):
                         continue
