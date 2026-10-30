@@ -46,8 +46,9 @@ public final class LoadingPlugin implements IFMLLoadingPlugin {
         String senderDrain = "com.replaymod.core.asm.ReplaySenderDrainTransformer";
         String fmlChannel = "com.replaymod.core.asm.ReplayFmlChannelTransformer";
         String hodgepodge = "com.replaymod.core.asm.HodgepodgeReplayTransformer";
+        String recovery = "com.replaymod.core.asm.ReplayPostProcessTransformer";
         return Boolean.getBoolean("replaymod.glerrors")
-                ? new String[] {"com.replaymod.core.asm.GLErrorTransformer", tracker, recorder, angelica, bootstrap, missingEntity, shaderClock, senderDrain, fmlChannel, hodgepodge}
+                ? new String[] {"com.replaymod.core.asm.GLErrorTransformer", tracker, recorder, angelica, bootstrap, missingEntity, shaderClock, senderDrain, fmlChannel, hodgepodge, recovery}
                 : new String[] {tracker, recorder, angelica, bootstrap, missingEntity, shaderClock, senderDrain, fmlChannel, hodgepodge};
     }
 
