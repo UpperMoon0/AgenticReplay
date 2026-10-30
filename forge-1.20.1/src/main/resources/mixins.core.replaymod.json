@@ -29,6 +29,7 @@
     "MixinAgentReplayViewDistance",
     "MixinExportEntityGeometryReadiness",
     "MixinExportEmbeddiumEntityVisibility",
+    "MixinExportEmbeddiumChunkQueues",
     "MinecraftAccessor",
     //#if MC>=11900
     "SimpleOptionAccessor",

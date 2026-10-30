@@ -19,6 +19,8 @@
     //#endif
     "MixinKeyboardListener",
     "MixinMinecraft",
+    "MixinExportEmbeddiumTerrainReadiness",
+    "MixinExportEmbeddiumChunkQueues",
     "GuiScreenAccessor",
     "KeyBindingAccessor",
     "MinecraftAccessor",

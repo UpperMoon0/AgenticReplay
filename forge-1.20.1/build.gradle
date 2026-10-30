@@ -139,3 +139,10 @@ sourceSets.test.java.srcDir rootProject.file('common/src/test/java')
 
 sourceSets.main.java.srcDir rootProject.file('api-common/src/main/java')
 sourceSets.test.java.srcDir rootProject.file('api-common/src/test/java')
+
+// Preserve upstream and agent-code notices in binary and source distributions.
+tasks.withType(org.gradle.jvm.tasks.Jar).configureEach {
+    from('../legacy-1.7.10/LICENSE.md') { into 'META-INF'; rename { 'LICENSE-upstream-replaymod.txt' } }
+    from('../LICENSE.txt') { into 'META-INF'; rename { 'LICENSE-agent-code.txt' } }
+}
+java { withSourcesJar() }

@@ -2,6 +2,8 @@ package com.replaymod.render.mixin;
 
 import com.replaymod.render.hooks.ForceChunkLoadingHook;
 import com.replaymod.render.hooks.IForceChunkLoading;
+import com.replaymod.render.hooks.EmbeddiumTerrainBarrier;
+import com.replaymod.render.hooks.EmbeddiumTerrainReadiness;
 import com.replaymod.render.utils.FlawlessFrames;
 import com.replaymod.render.utils.FlawlessFramesHelper;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -67,6 +69,10 @@ public abstract class Mixin_ForceChunkLoading implements IForceChunkLoading {
             return;
         }
         if (LoadingModList.get().getModFileById("embeddium") != null && FlawlessFramesHelper.hasEmbeddium()) {
+            EmbeddiumTerrainReadiness readiness = EmbeddiumTerrainReadiness.current();
+            EmbeddiumTerrainBarrier.complete(
+                    () -> setupTerrain(camera, this.frustum, this.capturedFrustum != null, this.client.player.isSpectator()),
+                    readiness::agenticReplay$terrainWorkPending);
             return;
         }
 

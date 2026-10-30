@@ -233,6 +233,12 @@ public class PacketListener extends ChannelInboundHandlerAdapter {
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) {
+        // save(Packet) queues network packets on this same client executor.
+        // Finalize behind those writes, including an aborted login/configuration.
+        if (!mc.isOnThread()) {
+            mc.send(() -> channelInactive(ctx));
+            return;
+        }
         metaData.setDuration((int) lastSentPacket);
         saveMetaData();
 
