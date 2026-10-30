@@ -105,6 +105,8 @@ def forkJar = tasks.register('forkJar', org.gradle.jvm.tasks.Jar) {
         exclude 'com/replaymod/core/asm/GLStateTrackerTransformer*.class'
         exclude 'com/replaymod/render/hooks/GLStateTracker*.class'
         exclude 'com/replaymod/core/LoadingPlugin*.class'
+        // Source-owned replacement preserves the vanilla input event loop.
+        exclude 'com/replaymod/recording/mixin/MixinGuiScreen*.class'
     }
     manifest {
         attributes('FMLCorePlugin': 'com.replaymod.core.LoadingPlugin',
